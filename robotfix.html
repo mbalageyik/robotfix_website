@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RobotFix – Robot Süpürge Tamir & Yedek Parça | Gaziantep</title>
+<meta name="description" content="Gaziantep'te tüm marka robot süpürge tamiri ve yedek parça satışı. iRobot, Roborock, Xiaomi, Ecovacs ve daha fazlası. Hızlı, güvenilir, uygun fiyatlı.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #08080f;
+    --surface: #111119;
+    --surface2: #18181f;
+    --surface3: #1e1e28;
+    --accent: #00e5a0;
+    --accent-dim: rgba(0,229,160,0.12);
+    --accent-border: rgba(0,229,160,0.28);
+    --blue: #00b8ff;
+    --blue-dim: rgba(0,184,255,0.10);
+    --text: #eeeef5;
+    --text2: #9999b0;
+    --text3: #55556a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --r: 14px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+    --max: 1160px;
+    --px: clamp(20px, 5vw, 80px);
+    --wa: #25D366;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+
+  /* ── LAYOUT UTILS ── */
+  .container { max-width: var(--max); margin: 0 auto; padding: 0 var(--px); }
+  .section { padding: clamp(60px, 9vw, 100px) var(--px); max-width: var(--max); margin: 0 auto; }
+
+  /* ── TYPOGRAPHY ── */
+  .eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h1, h2, h3, h4 { font-family: 'Syne', sans-serif; letter-spacing: -0.02em; }
+  h1 { font-size: clamp(36px, 6.5vw, 68px); font-weight: 800; line-height: 1.05; }
+  h2 { font-size: clamp(26px, 4vw, 46px); font-weight: 800; line-height: 1.12; margin-bottom: 12px; }
+  h3 { font-size: clamp(15px, 2vw, 18px); font-weight: 700; margin-bottom: 8px; }
+  h1 em, h2 em { font-style: normal; color: var(--accent); }
+  p.lead { font-size: clamp(15px, 2vw, 18px); color: var(--text2); line-height: 1.75; max-width: 540px; margin-bottom: 36px; }
+  p.small { font-size: 14px; color: var(--text2); line-height: 1.65; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+    border-radius: 10px; padding: 14px 26px; cursor: pointer; border: none;
+    transition: transform .15s ease, opacity .2s ease; text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-green { background: var(--accent); color: #000; }
+  .btn-green:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-wa { background: var(--wa); color: #fff; font-size: 16px; padding: 16px 30px; border-radius: 12px; }
+  .btn-wa:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--text3); background: var(--surface2); }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 200;
+    background: rgba(8,8,15,0.85);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: var(--max); margin: 0 auto; padding: 0 var(--px);
+    height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; flex-shrink: 0; }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a { font-size: 14px; color: var(--text2); transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { flex-shrink: 0; }
+  .nav-cta .btn { font-size: 13px; padding: 9px 18px; border-radius: 8px; }
+  .hamburger { display: none; background: none; border: 1px solid var(--border2); border-radius: 8px; padding: 7px 10px; cursor: pointer; color: var(--text2); font-size: 18px; line-height: 1; }
+  .mobile-menu { display: none; flex-direction: column; gap: 2px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px var(--px); }
+  .mobile-menu a { font-size: 15px; color: var(--text2); padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .mobile-menu a:last-child { border: none; }
+  .mobile-menu.open { display: flex; }
+
+  /* ── HERO ── */
+  .hero-wrap {
+    padding: clamp(56px, 9vw, 110px) var(--px) clamp(50px, 8vw, 90px);
+    max-width: var(--max); margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 420px; gap: 60px; align-items: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-dim); border: 1px solid var(--accent-border);
+    color: var(--accent); font-size: 13px; font-weight: 500;
+    padding: 7px 16px; border-radius: 50px; margin-bottom: 22px;
+  }
+  .hero-badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+  .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  /* robot card */
+  .robot-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: clamp(28px, 4vw, 44px); position: relative; overflow: hidden;
+  }
+  .robot-card::before {
+    content: ''; position: absolute; top: -80px; right: -80px;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,229,160,0.08), transparent 65%);
+    pointer-events: none;
+  }
+  .robot-emoji { font-size: clamp(64px, 10vw, 96px); display: block; text-align: center; margin-bottom: 16px; animation: float 3.5s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+  .robot-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; text-align: center; margin-bottom: 4px; }
+  .robot-sub { font-size: 13px; color: var(--text2); text-align: center; margin-bottom: 20px; }
+  .tag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tag {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 12px; color: var(--text2);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  /* ── STATS BAND ── */
+  .stats-band {
+    background: var(--surface);
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .stats-inner {
+    max-width: var(--max); margin: 0 auto; padding: clamp(28px, 4vw, 44px) var(--px);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center;
+  }
+  .stat-num { font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 42px); font-weight: 800; color: var(--accent); }
+  .stat-lbl { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  /* ── SERVICES ── */
+  .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .svc-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-lg); padding: clamp(22px, 3vw, 32px);
+    transition: border-color .2s, transform .2s;
+  }
+  .svc-card:hover { border-color: rgba(0,229,160,0.35); transform: translateY(-3px); }
+  .svc-icon { font-size: 32px; margin-bottom: 14px; display: block; }
+  .svc-card p { font-size: 14px; color: var(--text2); line-height: 1.65; }
+
+  /* ── BRANDS ── */
+  .brands-band {
+    background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: clamp(44px, 6vw, 64px) var(--px);
+  }
+  .brands-inner { max-width: var(--max); margin: 0 auto; }
+  .brands-lbl { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text3); text-align: center; margin-bottom: 24px; }
+  .brand-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .brand-chip {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 18px; font-size: 13px; font-weight: 500; color: var(--text2);
+    transition: color .15s, border-color .15s;
+  }
+  .brand-chip:hover { color: var(--text); border-color: var(--border2); }
+
+  /* ── PROCESS ── */
+  .process-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+    position: relative; counter-reset: step;
+  }
+  .process-grid::before {
+    content: ''; position: absolute;
+    top: 27px; left: calc(12.5% + 8px); right: calc(12.5% + 8px);
+    height: 1px; background: var(--border2);
+  }
+  .step-card { text-align: center; padding: 0 8px; }
+  .step-num {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800;
+    color: var(--accent); margin: 0 auto 16px;
+  }
+  .step-card h4 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .step-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  /* ── CONTACT ── */
+  .contact-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-xl); padding: clamp(32px, 5vw, 64px);
+    display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 5vw, 72px);
+    align-items: start; position: relative; overflow: hidden;
+  }
+  .contact-card::after {
+    content: ''; position: absolute; bottom: -100px; right: -100px;
+    width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, var(--blue-dim), transparent 65%);
+    pointer-events: none;
+  }
+  .info-list { display: flex; flex-direction: column; gap: 0; margin-top: 28px; }
+  .info-row {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 0; border-top: 1px solid var(--border);
+  }
+  .info-row:last-child { border-bottom: 1px solid var(--border); }
+  .info-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .info-row strong { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; color: var(--text); }
+  .info-row span { font-size: 13px; color: var(--text2); line-height: 1.55; }
+  .cta-stack { display: flex; flex-direction: column; gap: 14px; }
+  .map-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 14px 22px; font-size: 14px; font-weight: 500;
+    color: var(--text); transition: border-color .2s, background .2s;
+  }
+  .map-btn:hover { border-color: var(--text3); background: var(--surface3); }
+  .tip-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+    font-size: 13px; color: var(--text2); line-height: 1.6;
+  }
+  .tip-box strong { color: var(--text); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: clamp(24px, 4vw, 40px) var(--px);
+  }
+  .footer-inner {
+    max-width: var(--max); margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .footer-copy { font-size: 13px; color: var(--text3); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1000px) {
+    .hero-wrap { grid-template-columns: 1fr; }
+    .robot-card { display: none; }
+    .services-grid { grid-template-columns: repeat(2, 1fr); }
+    .stats-inner { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 720px) {
+    .process-grid { grid-template-columns: repeat(2, 1fr); }
+    .process-grid::before { display: none; }
+    .contact-card { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .nav-cta { display: none; }
+    .hamburger { display: block; }
+  }
+
+  @media (max-width: 520px) {
+    :root { --px: 18px; }
+    .services-grid { grid-template-columns: 1fr; }
+    .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .hero-btns { flex-direction: column; }
+    .hero-btns .btn { justify-content: center; }
+    .process-grid { grid-template-columns: 1fr; gap: 16px; }
+    .step-num { margin: 0 auto 12px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; }
+    .tag-grid { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="logo">Robot<span>Fix</span></a>
+    <div class="nav-links">
+      <a href="#hizmetler">Hizmetler</a>
+      <a href="#markalar">Markalar</a>
+      <a href="#nasil-calisir">Nasıl Çalışır?</a>
+      <a href="#iletisim">İletişim</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn btn-green" href="https://wa.me/905524261616" target="_blank" rel="noopener">📲 WhatsApp ile Ulaş</a>
+    </div>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Menü">☰</button>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#hizmetler" onclick="toggleMenu()">Hizmetler</a>
+    <a href="#markalar" onclick="toggleMenu()">Markalar</a>
+    <a href="#nasil-calisir" onclick="toggleMenu()">Nasıl Çalışır?</a>
+    <a href="#iletisim" onclick="toggleMenu()">İletişim</a>
+    <a href="https://wa.me/905524261616" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">📲 WhatsApp ile Ulaş</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero-wrap">
+  <div>
+    <div class="hero-badge">
+      <span class="pulse"></span>
+      Gaziantep'in Uzman Robot Tamircisi
+    </div>
+    <h1>Robot Süpürgen<br><em>Arızalı</em> Mı?</h1>
+    <p class="lead">Tüm marka robot süpürgelerin tamir ve bakımını yapıyor, orijinal ve uyumlu yedek parçalarını temin ediyoruz. Hızlı, güvenilir, uygun fiyatlı.</p>
+    <div class="hero-btns">
+      <a class="btn btn-green" href="https://wa.me/905524261616" target="_blank" rel="noopener">💬 Şimdi Yaz → Hızlı Fiyat Al</a>
+      <a class="btn btn-ghost" href="#hizmetler">Hizmetleri Gör</a>
+    </div>
+  </div>
+  <div class="robot-card">
+    <span class="robot-emoji">🤖</span>
+    <div class="robot-title">Profesyonel Tamir</div>
+    <div class="robot-sub">Tüm arızalar giderilir</div>
+    <div class="tag-grid">
+      <div class="tag"><span class="dot"></span>Batarya Değişimi</div>
+      <div class="tag"><span class="dot"></span>Şarj Sorunları</div>
+      <div class="tag"><span class="dot"></span>Fırça &amp; Motor</div>
+      <div class="tag"><span class="dot"></span>Navigasyon</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-band">
+  <div class="stats-inner">
+    <div><div class="stat-num">500+</div><div class="stat-lbl">Tamir Edildi</div></div>
+    <div><div class="stat-num">20+</div><div class="stat-lbl">Marka Servisi</div></div>
+    <div><div class="stat-num">%95</div><div class="stat-lbl">Müşteri Memnuniyeti</div></div>
+    <div><div class="stat-num">1 Gün</div><div class="stat-lbl">Ort. Teslimat</div></div>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<section class="section" id="hizmetler">
+  <span class="eyebrow">Hizmetlerimiz</span>
+  <h2>Her Arızaya <em>Çözüm</em> Üretiyoruz</h2>
+  <p class="lead">Robot süpürgenizin hangi sorunu olursa olsun, uzman ekibimiz en kısa sürede müdahale eder.</p>
+  <div class="services-grid">
+    <div class="svc-card">
+      <span class="svc-icon">🔋</span>
+      <h3>Batarya Değişimi</h3>
+      <p>Şarj tutmayan veya hızlı biten bataryaları orijinal ve yüksek kapasiteli versiyonlarla değiştiriyoruz.</p>
+    </div>
+    <div class="svc-card">
+      <span class="svc-icon">⚙️</span>
+      <h3>Motor Tamiri</h3>
+      <p>Emme gücü düşen, ses yapan veya çalışmayan motorları tamir ediyor ve değiştiriyoruz.</p>
+    </div>
+    <div class="svc-card">
+      <span class="svc-icon">🧹</span>
+      <h3>Fırça &amp; Süpürge</h3>
+      <p>Tıkanan, kırılan veya aşınan yan fırçalar ve ana fırça modülü değişimi.</p>
+    </div>
+    <div class="svc-card">
+      <span class="svc-icon">📡</span>
+      <h3>Sensör &amp; Navigasyon</h3>
+      <p>Takılan, takılma yapan veya yanlış hareket eden robotların sensör ve yazılım sorunları.</p>
+    </div>
+    <div class="svc-card">
+      <span class="svc-icon">🔌</span>
+      <h3>Şarj İstasyonu</h3>
+      <p>Şarj tabanına dönemeyen veya şarj almayan cihazlar için dok ve kart tamiri.</p>
+    </div>
+    <div class="svc-card">
+      <span class="svc-icon">🛒</span>
+      <h3>Yedek Parça Satışı</h3>
+      <p>Tüm marka ve modeller için orijinal ve uyumlu yedek parçaları stokta bulunduruyoruz.</p>
+    </div>
+  </div>
+</section>
+
+<!-- BRANDS -->
+<div class="brands-band" id="markalar">
+  <div class="brands-inner">
+    <div class="brands-lbl">Servis verdiğimiz markalar</div>
+    <div class="brand-list">
+      <span class="brand-chip">iRobot Roomba</span>
+      <span class="brand-chip">Roborock</span>
+      <span class="brand-chip">Xiaomi</span>
+      <span class="brand-chip">Ecovacs</span>
+      <span class="brand-chip">Neato</span>
+      <span class="brand-chip">Shark</span>
+      <span class="brand-chip">Samsung</span>
+      <span class="brand-chip">Philips</span>
+      <span class="brand-chip">Tefal</span>
+      <span class="brand-chip">Rowenta</span>
+      <span class="brand-chip">Bissell</span>
+      <span class="brand-chip">Dreame</span>
+      <span class="brand-chip">Midea</span>
+      <span class="brand-chip">Zaco</span>
+      <span class="brand-chip">ve diğerleri…</span>
+    </div>
+  </div>
+</div>
+
+<!-- PROCESS -->
+<section class="section" id="nasil-calisir">
+  <span class="eyebrow">Süreç</span>
+  <h2>Nasıl <em>Çalışır?</em></h2>
+  <p class="lead" style="margin-bottom:48px">4 basit adımda cihazınızı teslim edin, tamir edilmiş şekilde geri alın.</p>
+  <div class="process-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <h4>WhatsApp'tan Yazın</h4>
+      <p>Arızayı ve cihaz modelini mesaj veya fotoğrafla bildirin.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <h4>Fiyat Onayı</h4>
+      <p>Ön fiyat teklifini onayladıktan sonra tamir işlemi başlar.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <h4>Teslim Edin</h4>
+      <p>Adresimize bizzat getirin ya da kargoya verin.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <h4>Teslim Alın</h4>
+      <p>Tamir tamamlandığında bildirim gelir, cihazınızı teslim alırsınız.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="section" id="iletisim">
+  <div class="contact-card">
+    <div>
+      <span class="eyebrow">İletişim</span>
+      <h2>Hemen <em>Ulaşın</em></h2>
+      <p class="small" style="max-width:420px;margin-top:10px">Sorularınız için veya hızlı fiyat almak için WhatsApp'tan yazın ya da adresimize bekleriz.</p>
+      <div class="info-list">
+        <div class="info-row">
+          <span class="info-icon">📍</span>
+          <div>
+            <strong>Adresimiz</strong>
+            <span>Sarıgüllük, 61030. Sk. No: 1/A,<br>27060 Şehitkamil / Gaziantep</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">📱</span>
+          <div>
+            <strong>Telefon / WhatsApp</strong>
+            <span>0552 426 16 16</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">🕐</span>
+          <div>
+            <strong>Çalışma Saatleri</strong>
+            <span>Hafta içi 09:00 – 18:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cta-stack">
+      <a class="btn btn-wa" href="https://wa.me/905524261616" target="_blank" rel="noopener">
+        <span style="font-size:22px">💬</span>
+        <div>
+          <div style="font-size:12px;opacity:.75;margin-bottom:2px;font-weight:400">WhatsApp üzerinden</div>
+          <div>Hızlı Fiyat Al</div>
+        </div>
+        <span style="margin-left:auto">→</span>
+      </a>
+      <a class="map-btn" href="https://maps.google.com/maps?q=Sarıgüllük,+61030+Sk.+No:+1/A,+27060+Şehitkamil,+Gaziantep" target="_blank" rel="noopener">
+        <span style="font-size:18px">🗺️</span>
+        Google Haritada Gör
+        <span style="margin-left:auto;color:var(--text3)">↗</span>
+      </a>
+      <div class="tip-box">
+        💡 <strong>İpucu:</strong> Cihazınızın model numarası ve arıza fotoğrafını WhatsApp'tan göndererek çok daha hızlı fiyat teklifi alabilirsiniz.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="logo">Robot<span>Fix</span></div>
+    <div class="footer-copy">© 2025 RobotFix – Tüm marka robot süpürge tamir &amp; yedek parça – Gaziantep</div>
+    <a class="btn btn-green" href="https://wa.me/905524261616" target="_blank" rel="noopener" style="font-size:13px;padding:9px 18px;border-radius:8px">📲 WhatsApp</a>
+  </div>
+</footer>
+
+<script>
+  function toggleMenu() {
+    var m = document.getElementById('mobileMenu');
+    m.classList.toggle('open');
+  }
+  document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      var id = this.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+</script>
+</body>
+</html>
