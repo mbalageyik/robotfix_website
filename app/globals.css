@@ -1,26 +1,353 @@
 @import "tailwindcss";
 
+/*
+  ============================================================================
+  Robot Fix tasarım sistemi — TEK renk kaynağı.
+  Bileşen dosyalarında ham hex KULLANILMAZ (bkz. __tests__/source-hygiene.test.ts).
+
+  İki katman:
+    1. Ham palet (--rf-*)  : bilgi dosyası §15'teki onaylı renkler, isimlendirilmiş.
+    2. Semantik roller     : @theme içinde; Tailwind yardımcı sınıflarını üretir.
+
+  Açık ve koyu yüzeyler AYRI token setleridir. Koyu bölümlerde `.rf-on-dark`
+  sınıfı semantik rolleri koyu sete çevirir; böylece bileşenler tek bir role
+  (`text-text`, `border-border`…) yazılır ve her iki zeminde de doğru çalışır.
+  ============================================================================
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Ham palet: onaylı "Güven veren teknoloji" (bilgi dosyası §15) --- */
+  --rf-navy-900: #0b1f33; /* Gece Laciverti */
+  --rf-navy-700: #123b5d; /* Servis Laciverti */
+  --rf-blue-600: #1769aa; /* Güven Mavisi */
+  --rf-green-700: #0b6e4f; /* Güven Yeşili — ana CTA */
+  --rf-whatsapp-800: #075e54; /* Koyu WhatsApp Yeşili */
+  --rf-cyan-400: #3fc7d3; /* Hassas Camgöbeği */
+  --rf-ice-50: #f5f8fa; /* Buz Beyazı */
+  --rf-white: #ffffff; /* Saf Beyaz */
+  --rf-slate-700: #334155; /* Koyu Arduvaz */
+  --rf-mist-200: #d7e0e8; /* Sis Grisi */
+
+  /* Alternatif palet A'dan alınan TEK token: sinematik/3D zemin. */
+  --rf-cinematic-950: #0b0f14;
+
+  /* --- Türetilmiş tonlar (paletten üretildi, yeni marka rengi değil) --- */
+  --rf-green-800: #095b41; /* Güven Yeşili hover — beyaz üstünde 8.13:1 */
+  --rf-blue-700: #125786; /* Güven Mavisi hover — 7.68:1 */
+  --rf-whatsapp-900: #064b43; /* WhatsApp hover — 10.02:1 */
+  --rf-steel-600: #475467; /* Form/kontrol sınırı — beyaz 7.69:1, buz 7.21:1 */
+  --rf-steel-400: #537c99; /* Koyu zeminde kontrol sınırı — gece lac. 3.74:1 */
+  --rf-slate-500: #64748b; /* Devre dışı metin — beyaz 4.76:1 */
+
+  /*
+    Koyu zeminde DOLU BUTON KENARI.
+    Marka kitabı §3.6.3: Güven Yeşili yüzeyi Gece Laciverti üstünde yalnız
+    2.67:1, WhatsApp yeşili 2.18:1 — butonun nerede bittiği görünmez. Bu yüzden
+    koyu yüzeyde dolu butonlar 1px kenarlık taşır.
+    Sis Grisi × Gece Laciverti karışımı; gece lac. 4.89:1, servis lac. 3.40:1,
+    sinematik 5.63:1 — üç koyu zeminde de ≥3:1.
+  */
+  --rf-edge-on-dark: #7e8d99;
+
+  /* --- Durum renkleri: marka vurgularından AYRI (bilgi dosyası §15) --- */
+  --rf-status-success: #067647;
+  --rf-status-info: #175cd3;
+  --rf-status-warning: #b54708;
+  --rf-status-danger: #b42318;
+  --rf-status-neutral: var(--rf-steel-600); /* aynı kilitli değer, iki rol */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  /* ===== Semantik renk rolleri — AÇIK yüzey seti (varsayılan) ===== */
+
+  /* Yüzeyler */
+  --color-surface: var(--rf-ice-50); /* sayfa zemini */
+  --color-surface-raised: var(--rf-white); /* kart, form, bilgi bloğu */
+  --color-surface-sunken: var(--rf-mist-200); /* girinti, ayırıcı bant */
+  --color-surface-dark: var(--rf-navy-900); /* marka anlatımı bölümleri */
+  --color-surface-dark-raised: var(--rf-navy-700); /* koyu zeminde kart */
+  --color-surface-cinematic: var(--rf-cinematic-950); /* YALNIZ 3D sahneler */
+
+  /* Metin */
+  --color-text: var(--rf-navy-900); /* başlık + ana metin */
+  --color-text-muted: var(--rf-slate-700); /* gövde + yardımcı metin */
+  --color-text-disabled: var(--rf-slate-500);
+  --color-text-inverse: var(--rf-white);
+
+  /*
+    Kontur — iki ayrı rol, marka kitabı §3.6.1.
+    Sis Grisi beyaz üstünde 1.34:1'dir: YALNIZ dekoratif ayırıcı olabilir.
+    Form alanı, çip, onay kutusu ve buton çerçevesi WCAG 1.4.11 kapsamındadır
+    ve ≥3:1 ister → bunlar `border-strong` kullanır.
+  */
+  --color-border: var(--rf-mist-200); /* dekoratif: kart kenarı, ayırıcı */
+  --color-border-strong: var(--rf-steel-600); /* etkileşimli: input, checkbox */
+
+  /* Dolu buton kenarı — açık zeminde gerekmez (yüzey kontrastı yeterli). */
+  --color-button-edge: transparent;
+
+  /* Eylem renkleri — ana CTA rengi bölümden bölüme DEĞİŞMEZ */
+  --color-action: var(--rf-green-700);
+  --color-action-hover: var(--rf-green-800);
+  --color-action-fg: var(--rf-white);
+  --color-action-whatsapp: var(--rf-whatsapp-800);
+  --color-action-whatsapp-hover: var(--rf-whatsapp-900);
+  --color-action-whatsapp-fg: var(--rf-white);
+  --color-action-secondary: var(--rf-blue-600);
+  --color-action-secondary-hover: var(--rf-blue-700);
+  --color-action-secondary-fg: var(--rf-white);
+
+  /* Bağlantı ve vurgu */
+  --color-link: var(--rf-blue-600);
+  --color-link-hover: var(--rf-blue-700);
+  --color-accent-tech: var(--rf-cyan-400); /* 3D ışık, mikro vurgu, rozet */
+
+  /* Odak halkası — her zeminde ≥3:1 görünür olmalı */
+  --color-focus: var(--rf-blue-600);
+
+  /* Durumlar */
+  --color-success: var(--rf-status-success);
+  --color-info: var(--rf-status-info);
+  --color-warning: var(--rf-status-warning);
+  --color-danger: var(--rf-status-danger);
+  --color-neutral: var(--rf-status-neutral);
+
+  /* ===== Tipografi ===== */
+  /*
+    Aileler layout.tsx içinde next/font ile self-host edilip atanır.
+    Marka kitabı §4.1: başlık Archivo (neo-grotesk, teknik otorite),
+    gövde Manrope (açık apertür, Türkçe uzun kelimelerde nefes alır),
+    teknik veri JetBrains Mono (ürün/stok kodunda I/l/1 ve 0/O ayrımı).
+  */
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), var(--font-body), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-technical), ui-monospace, "SFMono-Regular", monospace;
+
+  /*
+    Ölçek: 9 kademe + mono. Oran 1.25, clamp() 390px→1280px arasında akışkan.
+    Gövde temeli 17→18px: Türkçe kelime uzunluğu İngilizceden fazla, 16px bu
+    dilde yetersiz (marka kitabı §4.4).
+  */
+  --text-display: clamp(2.75rem, 1.6rem + 4.72vw, 5.375rem);
+  --text-display--line-height: 1; /* İ (U+0130) üstten kırpılmasın diye 0.98 değil */
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+
+  --text-h1: clamp(2.125rem, 1.523rem + 2.47vw, 3.5rem);
+  --text-h1--line-height: 1.05;
+  --text-h1--letter-spacing: -0.025em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: clamp(1.6875rem, 1.222rem + 1.91vw, 2.75rem);
+  --text-h2--line-height: 1.12;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: clamp(1.375rem, 1.101rem + 1.12vw, 2rem);
+  --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -0.015em;
+  --text-h3--font-weight: 600;
+
+  --text-h4: clamp(1.1875rem, 1.051rem + 0.56vw, 1.5rem);
+  --text-h4--line-height: 1.3;
+  --text-h4--letter-spacing: -0.01em;
+  --text-h4--font-weight: 700;
+
+  --text-body-lg: clamp(1.125rem, 1.043rem + 0.34vw, 1.3125rem);
+  --text-body-lg--line-height: 1.55;
+  --text-body-lg--letter-spacing: -0.005em;
+
+  --text-body: clamp(1.0625rem, 1.035rem + 0.11vw, 1.125rem);
+  --text-body--line-height: 1.65;
+  --text-body--letter-spacing: 0;
+
+  /* 14px altı akışkanlık yok — okunabilirlik tabanı delinmesin. */
+  --text-caption: 0.875rem;
+  --text-caption--line-height: 1.5;
+  --text-caption--letter-spacing: 0.005em;
+
+  --text-overline: 0.75rem;
+  --text-overline--line-height: 1.2;
+  --text-overline--letter-spacing: 0.08em;
+  --text-overline--font-weight: 600;
+
+  --text-mono: 0.9375rem;
+  --text-mono--line-height: 1.55;
+  --text-mono--letter-spacing: 0;
+
+  /* ===== Köşe yarıçapı ===== */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+
+  /* ===== Gölge — teknik/sakin his için sınır önce, gölge sonra ===== */
+  --shadow-raised: 0 1px 2px rgb(11 31 51 / 0.06), 0 1px 3px rgb(11 31 51 / 0.04);
+  --shadow-overlay: 0 12px 32px rgb(11 31 51 / 0.14), 0 2px 8px rgb(11 31 51 / 0.08);
+
+  /* ===== Bölüm ritmi ===== */
+  --spacing-section: clamp(3.5rem, 2rem + 6vw, 7rem);
+  --spacing-section-tight: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
+
+  /* ===== Hareket ===== */
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 420ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-text-muted);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* h1–h3 Archivo (otorite), h4–h6 Manrope 700 (marka kitabı §4.4). */
+  h1,
+  h2,
+  h3 {
+    color: var(--color-text);
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  h4,
+  h5,
+  h6 {
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /*
+    Sayısal veri hizalı olsun: fiyat listesi kaymışsa güven düşer
+    (marka kitabı §4.4). Fiyat, ürün/stok kodu ve teknik değerler.
+    Türkçe için `İ` ve `ı` doğru render edilsin diye lang="tr" kök şarttır.
+  */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    Odak göstergesi — bilgi dosyası §15: "Klavye odağı her arka planda net
+    görünmelidir." Çift halka kullanıyoruz: içte yüzey rengi, dışta odak rengi.
+    Böylece hem açık hem koyu zeminde en az bir halka kontrast sağlar.
+  */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Fare/dokunma ile tıklamada halka gösterme. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /*
+    Bilgi dosyası §15: "Bağlantılar yalnızca renk farkıyla bırakılmamalı."
+    İçerik bağlantıları varsayılan olarak altı çizili gelir.
+  */
+  a:not([class]) {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 0.08em;
+  }
+
+  a:not([class]):hover {
+    color: var(--color-link-hover);
+    text-decoration-thickness: 0.14em;
+  }
+
+  /* Türkçe mikro-tipografi: kesme işaretli sözcüklerde satır kırılmasını engelle. */
+  abbr[title] {
+    text-decoration: underline dotted;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /*
+    Koyu yüzey kapsamı.
+    Semantik rolleri koyu sete çevirir — bileşenler değişmez, bağlam değişir.
+    Bilgi dosyası §15: koyu = marka anlatımı/3D; açık = katalog ve karar alanları.
+  */
+  .rf-on-dark {
+    --color-surface: var(--rf-navy-900);
+    --color-surface-raised: var(--rf-navy-700);
+    --color-surface-sunken: var(--rf-cinematic-950);
+
+    --color-text: var(--rf-white);
+    --color-text-muted: var(--rf-mist-200);
+    --color-text-disabled: var(--rf-steel-400);
+    --color-text-inverse: var(--rf-navy-900);
+
+    --color-border: color-mix(in oklab, var(--rf-white) 16%, transparent);
+    --color-border-strong: var(--rf-steel-400);
+
+    /*
+      Marka kitabı §3.6.2: Güven Mavisi Gece Laciverti üstünde yalnız 2.89:1 —
+      koyu yüzeyde bağlantı, metin, ikon veya sınır rengi OLAMAZ. Camgöbeğine
+      geçilir (8.20:1) ve alt çizgi zorunlu kalır.
+    */
+    --color-link: var(--rf-cyan-400);
+    --color-link-hover: var(--rf-white);
+    --color-focus: var(--rf-cyan-400);
+
+    /* Marka kitabı §3.6.3: dolu butonlar koyu zeminde kenarlık taşır. */
+    --color-button-edge: var(--rf-edge-on-dark);
+
+    background-color: var(--color-surface);
+    color: var(--color-text-muted);
+  }
+
+  /* Sinematik/3D bölümler — yalnız marka anlatımında kullanılır. */
+  .rf-on-cinematic {
+    --color-surface: var(--rf-cinematic-950);
+    --color-surface-raised: var(--rf-navy-900);
+    background-color: var(--color-surface);
+  }
+}
+
+/*
+  Hareket azaltma — TEK global katman.
+  Bilgi dosyası §14: "Kullanıcının azaltılmış hareket tercihi desteklenmelidir."
+  Bileşenler ayrıca reduced-motion kontrolü yapmak zorunda kalmaz.
+*/
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
