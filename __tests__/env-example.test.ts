@@ -27,7 +27,7 @@ const SECRET_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "DATABASE_URL",
+  "SUPABASE_DB_URL",
   "NEXT_PUBLIC_GA_MEASUREMENT_ID",
 ];
 
@@ -46,5 +46,20 @@ describe(".env.example", () => {
 
   it("servis rol anahtarını tarayıcıya açmaz", () => {
     expect(envExample).not.toContain("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY");
+  });
+
+  it("hiçbir alan JWT benzeri gerçek anahtar içermez", () => {
+    // Supabase anahtarları `eyJ...` (JWT) veya `sb_...` biçimindedir.
+    expect(envExample).not.toMatch(/eyJ[A-Za-z0-9_-]{20,}/);
+    expect(envExample).not.toMatch(/\bsb_(publishable|secret)_[A-Za-z0-9_-]{10,}/);
+  });
+
+  it("gerçek Postgres bağlantı dizesi içermez", () => {
+    expect(envExample).not.toMatch(/postgres(ql)?:\/\/[^\s]+/);
+  });
+
+  it("demo ürün bayrağı tanımlı ve üretimde kapatılması gerektiği yazılı", () => {
+    expect(env.has("NEXT_PUBLIC_SHOW_DEMO_PRODUCTS")).toBe(true);
+    expect(envExample).toMatch(/[Üü]retimde/);
   });
 });

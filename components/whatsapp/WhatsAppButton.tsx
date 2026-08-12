@@ -1,6 +1,6 @@
 import { ButtonLink, type ButtonSize } from "@/components/ui/Button";
 import { WhatsAppIcon } from "@/components/ui/icons";
-import { isWhatsAppConfigured, whatsappPhone } from "@/lib/site-config";
+import { getSiteConfig } from "@/lib/site-config";
 import {
   buildProductMessage,
   buildServiceMessage,
@@ -38,7 +38,7 @@ type WhatsAppButtonProps = BaseProps &
     | { intent: "service"; service?: ServiceMessageInput; product?: never }
   );
 
-export function WhatsAppButton({
+export async function WhatsAppButton({
   label,
   size = "md",
   fullWidth,
@@ -46,7 +46,9 @@ export function WhatsAppButton({
   className,
   ...rest
 }: WhatsAppButtonProps) {
-  if (!isWhatsAppConfigured || !whatsappPhone) return null;
+  // Numara önce site_settings'ten, yoksa env'den gelir. Prop sözleşmesi değişmedi.
+  const { whatsappPhone } = await getSiteConfig();
+  if (!whatsappPhone) return null;
 
   const message =
     rest.intent === "product"

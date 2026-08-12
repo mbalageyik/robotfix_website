@@ -9,6 +9,17 @@ ve doğruluk sınırlarının tek kaynağıdır. Kullanıcının açık talebi b
 
 Yol haritası: `~/.claude/plans/rol-robot-fix-web-quizzical-pumpkin.md`
 
+## Marka yazımı (ihlal edilemez)
+
+Marka adı **her zaman iki kelimedir: "Robot Fix"**. Bu kural gövde metni, başlık, `<title>`,
+meta açıklama, Open Graph, structured data (JSON-LD) ve görsel `alt` metinleri dâhil
+**tüm metinsel yüzeylerde** geçerlidir.
+
+Bitişik **"RobotFix" yalnızca logo varlığında** (SVG/görsel dosyanın kendi çizimi içinde)
+serbesttir — orada yazım değil bir grafiktir. Logonun `alt` metni yine "Robot Fix" olur.
+
+Yasak varyantlar: `RobotFix`, `Robotfix`, `ROBOT FİX`, `Robot-Fix`, `RoboFix`.
+
 ## Doğruluk kuralı (ihlal edilemez)
 
 Bilgi dosyası §20'de listelenen bilgiler **uydurulamaz**: ürün listesi, fiyat, stok,
@@ -32,13 +43,31 @@ sitemap'in dışındadır. `NEXT_PUBLIC_SHOW_DEMO_PRODUCTS` ile kontrol edilir.
 | ---------------- | ---------------------------------------------------------------------------- |
 | Framework        | Next.js 16 App Router + React 19 + TypeScript (strict)                       |
 | Stil             | Tailwind v4, tokenlar `app/globals.css` `@theme` içinde                      |
-| Veri             | Supabase Postgres + Drizzle ORM                                              |
+| Veri             | Supabase Postgres + **elle yazılan SQL migrasyonları** (ORM yok)             |
 | Görsel           | Supabase Storage + `next/image`                                              |
 | Auth             | Supabase Auth (tek yönetici); kendi parola/oturum kodumuz yazılmaz           |
 | Panel            | Özel `/admin`; toplu CSV içe aktarma yok, ürün formu + kopyalayarak çoğaltma |
 | 3D               | Kalıcı Canvas + drei `View`, `next/dynamic` + `ssr:false`                    |
 | Deploy           | Vercel                                                                       |
 | Paket yöneticisi | npm                                                                          |
+
+## Bulunabilirlik durumları
+
+Şemadaki `availability_status` enum'unun **tek** Türkçe karşılığı vardır. Arayüzde
+başka bir sözcük kullanılmaz; yeni bir eşanlamlı uydurulmaz.
+
+| Enum değeri    | Arayüz metni    |
+| -------------- | --------------- |
+| `in_stock`     | Stokta          |
+| `limited`      | Sınırlı stok    |
+| `on_order`     | Siparişle       |
+| `out_of_stock` | Tükendi         |
+
+`on_order` şemada **kalır** — "siparişle temin edilir" gerçek bir satış durumudur ve
+"tükendi" ile aynı şey değildir. Bu ayrım silinmez.
+
+Durum **yalnız renkle** anlatılamaz (aşağıdaki kurala bakınız): `AvailabilityBadge`
+metni her zaman gösterir, yalnız-simge modu sunmaz.
 
 ## İhlal edilemez teknik kurallar
 

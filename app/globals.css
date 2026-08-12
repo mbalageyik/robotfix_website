@@ -121,7 +121,18 @@
   */
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-heading), var(--font-body), ui-sans-serif, sans-serif;
-  --font-mono: var(--font-technical), ui-monospace, "SFMono-Regular", monospace;
+  /*
+    ₺ (U+20BA) — ÖLÇÜLDÜ, VARSAYILMADI.
+    Tarayıcıda canvas advance ölçümü: JetBrains Mono'nun taşıdığı her glif tek
+    genişliktedir (100px'te 60 — `ı ğ Ş € $ £` dâhil), ₺ ise 55.62 ölçülür.
+    Yani JetBrains Mono U+20BA'yı TAŞIMAZ ve tarayıcı yedeğe düşer.
+    (Archivo ve Manrope taşır — ikisi de kendi metrikleriyle ölçüldü.)
+
+    Yedek zincire Manrope EKLENDİ: aksi hâlde ₺ rastgele bir sistem fontundan
+    gelir ve rakamlarla uyumsuz görünür. Böylece yedek belirli ve markaya ait
+    olur. `font-variant-numeric: tabular-nums` rakamları yine hizalı tutar.
+  */
+  --font-mono: var(--font-technical), var(--font-body), ui-monospace, "SFMono-Regular", monospace;
 
   /*
     Ölçek: 9 kademe + mono. Oran 1.25, clamp() 390px→1280px arasında akışkan.

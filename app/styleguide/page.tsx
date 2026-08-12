@@ -77,7 +77,7 @@ const typeScale = [
   ["mono", "text-mono font-mono", "RF-101 · 0O1lI · 1.249,00 ₺"],
 ] as const;
 
-const availabilities: Availability[] = ["in_stock", "limited", "backorder", "out_of_stock"];
+const availabilities: Availability[] = ["in_stock", "limited", "on_order", "out_of_stock"];
 
 function Swatch({ token, name, hex }: { token: string; name: string; hex: string }) {
   return (

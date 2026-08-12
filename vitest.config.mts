@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["__tests__/**/*.test.ts"],
+    // Veritabanı testleri ayrı yapılandırmada (yerel Supabase gerektirir).
+    exclude: ["__tests__/db/**"],
   },
 });

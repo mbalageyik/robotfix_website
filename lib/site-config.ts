@@ -1,11 +1,20 @@
 /*
   Site ayarlarının TEK kaynağı.
 
-  Bilgi dosyası §8: "Bu numara ... kod içinde sabitlenmek yerine site
-  ayarlarından yönetilebilmelidir." Bu yüzden numara koda gömülmez; env'den
-  okunur. Faz 3'te aynı arayüz `site_settings` tablosundan beslenecek —
-  tüketiciler (bileşenler) değişmeyecek.
+  İKİ KATMANLI ÇÖZÜM (bilgi dosyası §8, §17):
+
+    1. Aşağıdaki SENKRON dışa aktarımlar env'den beslenir ve VARSAYILAN /
+       YEDEK katmandır. Modül seviyesinde çözüldükleri için her bağlamda
+       (istemci dâhil) kullanılabilirler.
+
+    2. `getSiteConfig()` ASENKRON çözücü `site_settings` tablosunu okur ve
+       env değerlerinin ÜZERİNE yazar. Veritabanı yapılandırılmamışsa veya
+       değer boşsa sessizce env'e düşer.
+
+  Tüketici bileşenler değişmedi: WhatsAppButton artık bir async sunucu
+  bileşenidir ve içeride `getSiteConfig()` çağırır; prop sözleşmesi aynıdır.
 */
+import { getSiteSettings } from "@/lib/data/site-settings";
 import { InvalidPhoneNumberError, normalizePhone } from "@/lib/whatsapp";
 
 /** Env'den gelen ham değer; boş olabilir. */
@@ -54,3 +63,85 @@ export const whatsappCtaLabels = {
 } as const;
 
 export type WhatsAppCtaLabel = (typeof whatsappCtaLabels)[keyof typeof whatsappCtaLabels];
+
+// ---------------------------------------------------------------------------
+// Veritabanından beslenen çözülmüş yapılandırma
+// ---------------------------------------------------------------------------
+
+export interface ResolvedSiteConfig {
+  /** E.164 numara; hiçbir kaynakta yoksa `null` → CTA render edilmez. */
+  whatsappPhone: string | null;
+  isWhatsAppConfigured: boolean;
+  phoneDisplay: string | null;
+  addressLine: string | null;
+  workingHours: string | null;
+  mapsUrl: string | null;
+  /** Doğrulanmış pazaryeri MAĞAZA bağlantıları. Boş olanlar hiç yer almaz. */
+  storeLinks: { marketplace: string; label: string; url: string }[];
+  /** Değerin nereden geldiği — `/veri-kontrol` bunu gösterir. */
+  source: "database" | "env";
+}
+
+/** Ham bir numarayı güvenle E.164'e çevirir; olmuyorsa `null`. */
+function safeNormalize(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    return normalizePhone(trimmed);
+  } catch (error) {
+    if (error instanceof InvalidPhoneNumberError) {
+      console.error(`[site-config] numara okunamadı: ${error.message}`);
+      return null;
+    }
+    throw error;
+  }
+}
+
+const STORE_LINK_KEYS = [
+  { key: "store_amazon_url", marketplace: "amazon", label: "Amazon" },
+  { key: "store_hepsiburada_url", marketplace: "hepsiburada", label: "Hepsiburada" },
+  { key: "store_trendyol_url", marketplace: "trendyol", label: "Trendyol" },
+  { key: "store_pazarama_url", marketplace: "pazarama", label: "Pazarama" },
+] as const;
+
+/**
+ * Site ayarlarını veritabanından okur, env'i yedek olarak kullanır.
+ *
+ * Asla hata fırlatmaz: veritabanı erişilemezse env katmanına düşer ve
+ * `source: "env"` döner. Site ayarları yüzünden sayfa düşmemelidir.
+ */
+export async function getSiteConfig(): Promise<ResolvedSiteConfig> {
+  const result = await getSiteSettings();
+
+  if (!result.ok) {
+    return {
+      whatsappPhone,
+      isWhatsAppConfigured,
+      phoneDisplay: null,
+      addressLine: null,
+      workingHours: null,
+      mapsUrl: null,
+      storeLinks: [],
+      source: "env",
+    };
+  }
+
+  const settings = result.data;
+  // Veritabanı değeri önce; yoksa env varsayımı.
+  const resolvedPhone = safeNormalize(settings.whatsapp_phone) ?? whatsappPhone;
+
+  return {
+    whatsappPhone: resolvedPhone,
+    isWhatsAppConfigured: resolvedPhone !== null,
+    phoneDisplay: settings.phone_display,
+    addressLine: settings.address_line,
+    workingHours: settings.working_hours,
+    mapsUrl: settings.maps_url,
+    // Bilgi dosyası §9: bağlantı yoksa o pazaryerinin butonu HİÇ gösterilmez.
+    storeLinks: STORE_LINK_KEYS.flatMap(({ key, marketplace, label }) => {
+      const url = settings[key];
+      return url ? [{ marketplace, label, url }] : [];
+    }),
+    source: settings.whatsapp_phone ? "database" : "env",
+  };
+}

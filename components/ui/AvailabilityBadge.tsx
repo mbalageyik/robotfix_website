@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import type { AvailabilityStatus } from "@/lib/data/types";
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
@@ -16,7 +17,12 @@ import {
   Durum renkleri marka vurgu renklerinden ayrı tutulur (yine §15).
 */
 
-export type Availability = "in_stock" | "limited" | "backorder" | "out_of_stock";
+/*
+  Tip ŞEMADAN türetilir (`availability_status` enum'u). Veritabanına yeni bir
+  durum eklenirse aşağıdaki `config` eksik kalır ve typecheck kırılır — arayüz
+  sessizce çökmez.
+*/
+export type Availability = AvailabilityStatus;
 
 const config: Record<
   Availability,
@@ -32,7 +38,7 @@ const config: Record<
     icon: AlertTriangleIcon,
     className: "border-warning/35 bg-warning/10 text-warning",
   },
-  backorder: {
+  on_order: {
     label: "Siparişle",
     icon: ClockIcon,
     className: "border-info/35 bg-info/10 text-info",
@@ -71,6 +77,6 @@ export function AvailabilityBadge({ status, className }: AvailabilityBadgeProps)
 export const availabilityLabels: Record<Availability, string> = {
   in_stock: config.in_stock.label,
   limited: config.limited.label,
-  backorder: config.backorder.label,
+  on_order: config.on_order.label,
   out_of_stock: config.out_of_stock.label,
 };
