@@ -253,6 +253,16 @@ yazabilir — kendini yönetici yapan bir yol bilinçli olarak yoktur.
 
 1. Supabase Auth üzerinden yönetici kullanıcıyı oluşturun (panelde kullanıcı yönetimi
    bölümünden davet/oluştur).
+
+   > **Kullanıcıyı `auth.users`'a elle `insert` ile EKLEMEYİN.** Supabase Auth
+   > (GoTrue) jeton sütunlarını (`confirmation_token`, `recovery_token`,
+   > `email_change`, `email_change_token_new`, `email_change_token_current`,
+   > `phone_change`, `phone_change_token`, `reauthentication_token`) NULL kabul
+   > etmeyen alanlara okur. Şema NULL'a izin verse de NULL bırakılırsa giriş
+   > **her zaman** başarısız olur ve kullanıcıya "Database error querying schema"
+   > görünür — parola doğru olsa bile. Panelin kullanıcı oluşturma arayüzü bu
+   > sütunları doğru doldurur. (Ayrıntı: `docs/design-decisions.md` §24.)
+
 2. Panelin SQL çalıştırma ekranından kullanıcıyı allow-list'e ekleyin:
 
 ```sql
