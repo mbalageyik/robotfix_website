@@ -15,7 +15,23 @@ const env = loadEnv("", process.cwd(), "");
 
 export default defineConfig({
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./", import.meta.url)),
+      /*
+        `server-only` paketi varsayılan girdisinde BİLEREK hata atar; amacı bir
+        sunucu modülünün istemci paketine sızmasını derleme zamanında yakalamak.
+        Next.js bunu `react-server` koşuluyla zararsız `empty.js`'e çözer.
+
+        Vitest'in Node çözümleyicisinde o koşul yoktur, bu yüzden `server-only`
+        içeren her modülü içe aktarmak testi çökertir. Burada Next.js'in yaptığı
+        çözümün AYNISI elle yapılır.
+
+        Bu, korumayı ZAYIFLATMAZ: koruma üretim derlemesinde çalışır ve `npm run
+        build` her fazda kapı olarak koşulur. Burada yalnız test koşucusunun
+        modülü yükleyebilmesi sağlanır.
+      */
+      "server-only": fileURLToPath(new URL("./node_modules/server-only/empty.js", import.meta.url)),
+    },
   },
   test: {
     environment: "node",

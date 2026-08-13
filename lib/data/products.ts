@@ -38,9 +38,27 @@ import type {
 
   Bu yüzden seçim metni filtreye göre kurulur.
 */
-function buildListSelect(filters: ProductFilters): string {
-  const brandEmbed = filters.brandSlug ? "brands!inner" : "brands";
-  const categoryEmbed = filters.categorySlug ? "categories!inner" : "categories";
+/*
+  DÖNÜŞ TİPİ `string` DEĞİLDİR — bilerek.
+
+  supabase-js seçim metnini TİP DÜZEYİNDE ayrıştırır ve sonuç satırının tipini
+  oradan üretir. Bu ayrıştırma yalnız metin bir LİTERAL tip olduğunda çalışır;
+  `string`'e genişlerse çıkarım çöker ve çağrı yerlerinde `as unknown as`
+  gerekirdi.
+
+  Bu yüzden gömme adları ve şablon `as const` ile literal tutulur: TypeScript
+  şablon literal tipini interpolasyon boyunca korur, böylece dönüş tipi dört
+  olası seçim metninin BİRLEŞİMİ olur ve çıkarım ayakta kalır — seçim metnini
+  dört kez kopyalamak zorunda kalmadan.
+
+  Pratik kazanç: seçime bir sütun eklenip `RawListRow`'a eklenmezse (veya tersi)
+  derleyici bunu YAKALAR. Cast'li hâlde bu sessizce kaçardı.
+*/
+function buildListSelect(filters: ProductFilters) {
+  const brandEmbed = filters.brandSlug ? ("brands!inner" as const) : ("brands" as const);
+  const categoryEmbed = filters.categorySlug
+    ? ("categories!inner" as const)
+    : ("categories" as const);
 
   return `
   id, name, slug, sku, short_description,
@@ -49,7 +67,7 @@ function buildListSelect(filters: ProductFilters): string {
   brand:${brandEmbed} ( id, name, slug ),
   category:${categoryEmbed} ( id, name, slug ),
   images:product_images ( storage_path, alt_text, is_primary )
-`;
+` as const;
 }
 
 /** Filtresiz seçim (detay sorgusu ve elle seçilmiş ilgili ürünler için). */
@@ -174,7 +192,7 @@ export async function listProducts(
 
   const total = count ?? 0;
   return ok({
-    items: (data as unknown as RawListRow[]).map(toListItem),
+    items: data.map(toListItem),
     total,
     page,
     perPage,
@@ -216,40 +234,7 @@ export async function getProductBySlug(slug: string): Promise<DataResult<Product
   if (error) return fail("query_failed", error.message, error.code);
   if (!data) return fail("not_found", `Ürün bulunamadı: ${slug}`);
 
-  const row = data as unknown as RawListRow & {
-    long_description: string | null;
-    is_original: boolean | null;
-    box_contents: string | null;
-    installation_notes: string | null;
-    seo_title: string | null;
-    seo_description: string | null;
-    all_images: {
-      id: string;
-      storage_path: string;
-      alt_text: string;
-      is_primary: boolean;
-      display_order: number;
-    }[];
-    specs: { id: string; label: string; value: string; display_order: number }[];
-    compatibility: {
-      verified_note: string | null;
-      device_model: {
-        id: string;
-        name: string;
-        slug: string;
-        brand: { name: string; slug: string } | null;
-      } | null;
-    }[];
-    links: {
-      id: string;
-      marketplace: ProductDetail["marketplaceLinks"][number]["marketplace"];
-      custom_label: string | null;
-      url: string;
-      link_target: ProductDetail["marketplaceLinks"][number]["linkTarget"];
-      is_active: boolean;
-      display_order: number;
-    }[];
-  };
+  const row = data;
 
   const byOrder = <T extends { display_order: number }>(a: T, b: T) =>
     a.display_order - b.display_order;
@@ -335,7 +320,7 @@ export async function getRelatedProducts(
     // Yöneticinin sırasını koru.
     const rank = new Map(ids.map((id, index) => [id, index]));
     return ok(
-      (data as unknown as RawListRow[])
+      data
         .map(toListItem)
         .sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0)),
     );

@@ -395,3 +395,325 @@ eklendi → reddetti ve rollback yaptı).
 
 Ek olarak `rls.test.ts` içindeki bir test "hiçbir demo satır anonime görünmez" der:
 biri aktivasyonu geri almayı unutursa **test kırılır**. Beyan değil, bekçi.
+
+---
+
+# Faz 3 — Kimlik doğrulama ve yönetim paneli
+
+## 19. Üç savunma hattı ve `proxy.ts`'in ne OLMADIĞI
+
+Next.js 16'da `middleware.ts`'in adı **`proxy.ts`** oldu; davranış aynıdır.
+
+Yetkilendirme **üç bağımsız hatta** kurulur ve hiçbiri tek başına yeterli sayılmaz:
+
+| Hat | Dosya | Görevi | Tek başına yeterli mi |
+| --- | ----- | ------ | --------------------- |
+| 1 | `proxy.ts` | Oturum çerezini tazeler + iyimser ön eleme | **Hayır** |
+| 2 | `lib/auth/dal.ts` | Her sayfa ve her aksiyonda gerçek kontrol | Uygulama hattı |
+| 3 | Postgres RLS | `is_admin()` politikaları | Veritabanı hattı |
+
+**`proxy.ts` yetkilendirme yapmaz.** Next.js dokümanı proxy'nin "tam oturum yönetimi
+veya yetkilendirme çözümü" olarak kullanılmamasını açıkça söyler: proxy her rotada,
+prefetch edilenler dâhil çalışır; oraya veritabanı sorgusu koymak hem yavaşlatır hem
+de tek savunma hattı yanılsaması yaratır.
+
+**`app/admin/layout.tsx` de bir güvenlik sınırı değildir.** Kısmi render nedeniyle
+layout gezinmede yeniden çalışmaz ve alt segmentlerin render edilip edilmeyeceğini
+kontrol etmez. Bu yüzden **her sayfa `requireAdminPage()`, her aksiyon
+`requireAdminAction()` çağırır.**
+
+`proxy.ts` silinse bile panel güvenli kalmalıdır — `__tests__/db/admin-actions.test.ts`
+bunu doğrudan doğrular: yönetici olmayan bir oturumla aksiyonlar çağrılır ve hepsi
+yazmadan reddeder.
+
+**`getSession()` değil `getUser()`.** `getSession()` çerezdeki JWT'yi doğrulamadan
+okur ve çerez istemci tarafından üretilebilir. `getUser()` her çağrıda token'ı Auth
+sunucusuna doğrulatır.
+
+## 20. Server Actions — route handler değil
+
+Panelin tüm yazmaları **Server Actions** ile yapılır. Route handler yazılmadı.
+
+Gerekçe:
+
+- **CSRF çerçeveden gelir.** Next.js Server Actions isteğin `Origin` başlığını `Host`
+  ile karşılaştırır ve uyuşmayanı reddeder; aksiyon kimlikleri build sırasında
+  şifrelenir ve kullanılmayan aksiyonlar istemci paketinden çıkarılır. Kendi token
+  mekanizmamızı yazmak, çerçevenin sağladığını yeni bir hata yüzeyiyle tekrar icat
+  etmek olurdu.
+- **JS olmadan da çalışır.** Form + action ilerleyici geliştirmedir; panel, istemci
+  JS'i yüklenmeden de gönderilebilir.
+- **Tip güvenliği.** `FormData` → zod → tiplenmiş satır zinciri tek dosyada durur;
+  route handler'da istek/yanıt şeması elle senkron tutulurdu.
+
+Yazma işlemleri **hiçbir zaman GET olmaz**: `ActionButton` bir bağlantı değil form
+render eder, çünkü GET ile yazmak tarayıcı ön yüklemesi veya bir botun bağlantıyı
+izlemesiyle istem dışı tetiklenebilir.
+
+## 21. Panel yazmaları service role KULLANMAZ
+
+Panelin RLS'i atlaması cazip ama yanlıştır: o durumda uygulamadaki tek bir hata tüm
+veriyi açardı.
+
+Bunun yerine **yöneticinin kendi oturumu** kullanılır (`getServerClient()`, anon
+anahtar + çerez). RLS'teki "yönetici tam yetkili" politikası izin verici
+(permissive) olduğu için "aktifleri okur" politikasıyla VEYA'lanır ve yönetici
+taslak/pasif/arşiv dâhil her durumu görür — RLS ise ikinci savunma hattı olarak
+yerinde kalır.
+
+**Service role anahtarının kullanıldığı yerlerin tam listesi:**
+
+| Yer | Amaç |
+| --- | ---- |
+| `lib/supabase/admin-client.ts` | Anahtarın okunduğu **tek** dosya |
+
+Faz 3 sonunda `getAdminClient()` **hiçbir yerden çağrılmıyor**. İstemci ileride
+gerekebileceği için duruyor ve üç katmanlı korumasını koruyor (`server-only` importu,
+`NEXT_PUBLIC_` öneki taşımayan ad, çalışma zamanı `window` kontrolü).
+
+`__tests__/admin/security-hygiene.test.ts` bunu bekçiye bağlar: `SUPABASE_SERVICE_ROLE_KEY`
+kaynakta yalnız `admin-client.ts` içinde geçebilir ve hiçbir aksiyon dosyası
+`getAdminClient` çağıramaz.
+
+## 22. Taslak-kaydet / yayımla ayrımı
+
+Yayın durumu **form alanıdır**, ayrıca **tek tıklık geçiş butonları** vardır. İkisi
+birlikte bulunur çünkü iki farklı iş akışına hizmet ederler:
+
+- Form alanı: ürünü düzenlerken durumu da ayarlamak.
+- Geçiş butonu: yalnız durumu değiştirmek — formu doldurup göndermeye gerek kalmadan.
+
+**Yeni ürün daima `draft` doğar** (`EMPTY_PRODUCT_FORM`). Yeni ürünün varsayılan
+bulunabilirliği `on_order`'dır, `in_stock` değil: stok durumu henüz bilinmiyorken
+"Stokta" demek uydurmadır, "Siparişle" ise gerçek ve güvenli bir başlangıçtır.
+
+**Kalıcı silme yoktur.** Ana kayıtlar arşivlenir (`status = 'archived'`). Tek istisna
+**ürün görselleridir**: arşivlenmiş bir görselin anlamı yoktur ve dosyanın kovada
+kalması sessiz bir depolama maliyetidir; bu yüzden gerçek `DELETE` kullanılır ve
+arayüz iki adımlı onay ister.
+
+Onay adımı `window.confirm()` ile **yapılmaz**: tarayıcı kipi sayfayı kilitler, ekran
+okuyucu davranışı tutarsızdır ve stillendirilemez. Yerine `<details>` kullanılır —
+saf HTML, klavyeyle çalışır, JS kapalıyken de açılır.
+
+## 23. Storage kova politikası
+
+Kova `product-images`, **`public = true`**.
+
+Görünürlük gerekçesi: ürün görselleri zaten herkese açık bir katalogda gösterilecek ve
+`next/image` imzalı URL yenilemesiyle uğraşmadan doğrudan okuyabilmeli. Kovanın public
+olması **yazmayı açmaz** — üç yazma fiili (`insert`/`update`/`delete`) ayrı ayrı
+`public.is_admin()` ile korunur.
+
+**Kabul edilmiş ödünleşim:** taslak bir ürünün görseli de bu kovadadır ve URL'i bilen
+biri görebilir. Görsel dosyası sır değildir; ürünün **yayın durumu** ise veritabanında
+RLS ile korunur. Sır niteliğinde bir belge bu kovaya konulmaz.
+
+**Dosya kısıtı iki katmanlıdır** ve ikisi aynı sabitlerden beslenir:
+
+1. Kova düzeyi (`allowed_mime_types`, `file_size_limit` = 5 MB) — Storage API'si kendi
+   uygular; uygulama kodu atlansa bile reddeder.
+2. Uygulama düzeyi (`validateImageFile`) — kullanıcıya anlaşılır Türkçe mesaj verir.
+
+`__tests__/admin/storage.test.ts` ikisinin ayrışmasını imkânsız kılar: kova adı, boyut
+sınırı ve MIME listesi migrasyon dosyasıyla karşılaştırılır.
+
+**Yol kullanıcının dosya adını taşımaz.** Dosya adı saldırgan girdisidir (yol geçişi,
+Unicode hileleri, aşırı uzunluk); yol tamamen `products/<ürün-id>/<uuid>.<uzantı>`
+biçiminde bizim ürettiğimiz değerlerden kurulur. Bu, düşmanca bir dosya adıyla
+**çalıştırılarak** doğrulandı.
+
+## 24. GoTrue NULL jeton tuzağı — `dev_create_admin.sql`
+
+Supabase Auth (GoTrue) bir Go servisidir ve `auth.users` tablosundaki jeton sütunlarını
+(`confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new`,
+`email_change_token_current`, `phone_change`, `phone_change_token`,
+`reauthentication_token`) **NULL kabul etmeyen** `string` alanlara okur.
+
+Şema bu sütunlarda NULL'a izin verdiği için elle `insert` yapan bir betik onları
+kolayca NULL bırakır. Sonuç: parola doğru olsa bile giriş **her zaman** 500 döner —
+
+```
+Scan error on column index 3, name "confirmation_token":
+converting NULL to string is unsupported
+```
+
+— ve kullanıcıya "Database error querying schema" görünür.
+
+Bu tuzağa **düşüldü**: `dev_create_admin.sql`'in ilk hâli bu sütunları boş bırakıyordu
+ve oluşturulan yönetici hesabı hiçbir zaman giriş yapamıyordu. Betik artık hepsini
+açıkça `''` kurar ve ayrıca daha önce oluşmuş satırları `coalesce` ile onarır, böylece
+betiği yeniden çalıştırmak sorunu çözer.
+
+Üretimde yönetici, Supabase panelinin kendi arayüzünden oluşturulur (bkz.
+`docs/supabase-setup.md`); orada bu sütunlar servis tarafından doğru doldurulur.
+
+## 25. Panel indekslenmez — iki katman
+
+`ADMIN_ROBOTS` (`index: false, follow: false, nocache: true`) **her** admin sayfasında
+ve düzende bulunur; `app/robots.ts` ayrıca `/admin` ve `/veri-kontrol` yollarını
+taramaya kapatır.
+
+İkisi de gereklidir: `robots.txt` taramayı engeller ama başka bir siteden bağlantı
+verilirse sayfa yine de indekslenebilir — `noindex` bunu keser. Tersine `noindex`
+yalnız sayfa alındığında görülür; `robots.txt` trafiği baştan keser.
+
+Panel sayfaları ayrıca `force-dynamic`'tir: oturuma bağlı bir sayfanın statik
+üretilmesi, bir yöneticinin gördüğü HTML'in önbelleğe alınıp başkasına sunulması
+riskidir. Üçü de statik testle bekçiye bağlıdır.
+
+## 26. Kullanıcı numaralandırma sızdırılmaz
+
+Giriş formu "e-posta bulunamadı" ile "parola yanlış" durumlarını **ayırt ettirmez**;
+tek bir genel mesaj döner. Ayırt ettirseydi form bir kullanıcı numaralandırma aracına
+dönüşürdü.
+
+Aynı sebeple `is_admin` durumu da girişte sızdırılmaz: yönetici olmayan geçerli bir
+kullanıcı **giriş yapabilir**, panelde ise açık bir 403 görür (`/admin/yetkisiz`).
+403 sessizce gizlenmez — ne olduğu, neden olduğu ve ne yapabileceği yazılır.
+
+Hız sınırlaması Supabase Auth'un kendi korumasıyla yapılır (`config.toml` →
+`[auth.rate_limit]`), yeniden icat edilmez. 429 ayrı bir mesajla gösterilir çünkü bu
+bir kimlik bilgisi hatası değildir ve numaralandırma bilgisi taşımaz.
+
+## 27. Açık yönlendirme (open redirect) koruması
+
+Giriş sonrası dönüş adresi (`?devam=`) yalnız `/admin` ile başlayan ve `//` ile
+başlamayan bir yol olabilir. `//baska.site` tarayıcıda **protokol-göreli mutlak
+URL**'dir, bu yüzden ayrıca elenir.
+
+Kontrol **iki yerde** yapılır: giriş sayfasında (gizli alana yazılan değeri temizler)
+ve `signInAction` içinde (asıl kapı). Yalnız sayfada yapılsaydı aksiyona doğrudan
+istek atarak atlanabilirdi.
+
+## 28. Dinamik form koleksiyonları JSON olarak taşınır
+
+Teknik özellik, pazaryeri bağlantısı, uyumlu model ve ilgili ürün seçimleri sayısı
+değişken koleksiyonlardır. `specs[0][label]` biçiminde alan adı üretmek sunucuda elle
+ayrıştırma gerektirirdi.
+
+Bunun yerine her koleksiyon **tek bir gizli alana JSON** olarak yazılır ve sunucuda
+zod ile ayrıştırılır: şema tek kaynak kalır, ayrıştırma hataya kapalıdır.
+
+Alt tablolar **"sil ve yeniden yaz"** ile eşitlenir. Fark hesaplamak (hangi satır
+eklendi/çıkarıldı/sıralandı) küçük tablolar için gereksiz ve hataya çok açıktır.
+Ödünleşim: `product_specs.id` değerleri her kayıtta değişir — bu kimlikler dışarıya
+verilmediği için sorun değildir. **Görseller bu kapsamda değildir**; kimlikleri
+Storage yoluna bağlıdır ve ayrı yönetilir.
+
+## 29. Kopyalayarak çoğaltma
+
+CLAUDE.md toplu CSV içe aktarmayı kapsam dışı bırakır; yerine "ürün formu +
+kopyalayarak çoğaltma" der.
+
+Kopya **daima `draft`** doğar: benzer bir ürünü çoğaltıp düzenlemeyi unutmak, yanlış
+bilgiyi yayına almanın en kolay yoludur. Kopyalanmayanlar ve sebepleri:
+
+| Alan | Neden kopyalanmaz |
+| ---- | ----------------- |
+| `sku` | Benzersizdir; yönetici kendi girer |
+| Görseller | İki ürün aynı Storage dosyasını gösterirdi; birini silmek diğerini kırardı |
+| `is_demo` | Kopya elle üretilmiş gerçek bir kayıttır, örnek veri değil |
+| `is_featured` | Öne çıkarma bilinçli bir karardır, miras alınmaz |
+
+Kopya için slug **çakışmayacak biçimde** üretilir (`ad-kopya`, `-2`, `-3`…) çünkü
+kullanıcı hiçbir form doldurmadığından düzeltebileceği bir alan yoktur. Normal
+kaydetmede bu yapılmaz — orada çakışma kullanıcıya bildirilir ve slug'ı kendisi seçer.
+
+## 30. Slug üretimi TypeScript'te tekrarlanmaz
+
+Slug, veritabanının `slugify()` fonksiyonuyla üretilir; panel bir RPC çağrısı yapar.
+
+Gerekçe: tohum verisi, olası SQL taşımaları ve panel **aynı** slug'ı üretmelidir. İki
+ayrı uygulama er geç ayrışır — özellikle Türkçe'de (`I → ı`, `İ → i`) bu ayrışma
+sessiz ve **geri alınamaz** olur, çünkü slug kalıcı bir URL'dir.
+
+Maliyet: kaydetme başına bir ağ gidiş-dönüşü. Kabul edilebilir.
+
+## 31. Kategori döngüsü uygulama katmanında engellenir
+
+Şemada yalnız `parent_id <> id` kısıtı vardır (kendi kendinin üstü olamaz). Daha derin
+döngüler (A→B→A) `wouldCreateCycle()` ile engellenir: adayın ata zinciri yukarı
+yürünür ve düzenlenen kategoriye rastlanırsa reddedilir. Veride hâlihazırda bir döngü
+varsa `seen` kümesi sonsuz dönmeyi keser.
+
+Kontrol **sunucudadır**; formdaki seçenek listesinden yalnız kaydın kendisi çıkarılır.
+İstemci doğrulaması bir güvenlik sınırı değildir.
+
+## 32. Bağlı kayıt uyarısı arşivlemeden ÖNCE görünür
+
+Arşivleme yetim kayıt bırakmaz — bağlı ürünler silinmez — ama yönetici neyin
+etkileneceğini önceden bilmelidir. Bu yüzden bağlı kayıt sayıları liste ekranında
+gösterilir ve onay metnine yazılır.
+
+Sayımlar **tek sorguda** okunup bellekte gruplanır (`getDependencyCounts`); kayıt
+başına ayrı sayım sorgusu atmak N+1 olurdu.
+
+## 33. `next.config.ts` → `images.remotePatterns` env'den türetilir
+
+`next/image` uzak bir kaynaktan görsel almadan önce o kaynağın açıkça izinli olmasını
+ister; aksi hâlde site açık bir görsel proxy'sine dönüşür.
+
+Desen `NEXT_PUBLIC_SUPABASE_URL`'den **türetilir**, elle yazılmaz: yerelde
+`127.0.0.1:54341`, üretimde proje alan adı olur. İkisini de sabit yazsaydık
+ortamlardan biri sessizce bozulurdu. Yalnız `/storage/v1/object/public/**` yolu
+izinlidir; imzalı/özel yollar buradan geçmez.
+
+## 34. Vitest ve `server-only`
+
+`server-only` paketi varsayılan girdisinde bilerek hata atar; Next.js bunu
+`react-server` koşuluyla zararsız `empty.js`'e çözer. Vitest'in Node çözümleyicisinde
+o koşul yoktur, bu yüzden `vitest.db.config.mts` aynı çözümü elle yapar.
+
+Bu korumayı **zayıflatmaz**: koruma üretim derlemesinde çalışır ve `npm run build` her
+fazın kapısıdır. Alias yalnız test koşucusunun modülü yükleyebilmesini sağlar.
+
+## 35. `as unknown as` kaldırıldı — şablon literal tipiyle
+
+Faz 2'den kalan dört `as unknown as` (`lib/data/products.ts` ×3,
+`lib/data/taxonomy.ts` ×1) **sıfıra indirildi**. Bastırılmadı, sebebi ortadan
+kaldırıldı.
+
+**Kök sebep.** supabase-js seçim metnini *tip düzeyinde* ayrıştırır ve sonuç
+satırının tipini oradan üretir. Bu ayrıştırma yalnız metin bir **literal tip**
+olduğunda çalışır. `buildListSelect()` dönüş tipi `string` diye işaretlendiği
+için literallik kayboluyor, çıkarım çöküyor ve her çağrı yerinde elle yazılmış
+bir şekle cast etmek gerekiyordu.
+
+`taxonomy.ts`'teki cast ise **hiç gerekli değildi** — seçim zaten literaldi;
+cast kaldırılınca hiçbir şey değişmedi.
+
+**Çözüm.** Gömme adları ve şablon `as const` ile literal tutulur; dönüş tipi
+açıklaması kaldırılır. TypeScript şablon literal tipini interpolasyon boyunca
+korur, bu yüzden dönüş tipi dört olası seçim metninin **birleşimi** olur ve
+çıkarım ayakta kalır — seçim metnini dört kez kopyalamadan.
+
+**Neden kopyalamak yerine bu.** Dört ayrı literal metin yazmak da işe yarardı
+ama sütun listesi dört yere dağılırdı; bir sütun eklerken birini unutmak
+kolaydır. Şablon literal tipi tek kaynağı korur.
+
+**Kazanç ölçüldü, varsayılmadı.** Cast'ler kaldırıldıktan sonra seçimde
+olmayan bir sütuna (`row.this_column_does_not_exist`) erişim denendi ve
+derleyici bunu **yakaladı** — üretilen tipin `availability` alanı gerçek enum
+birleşimi (`"in_stock" | … | "out_of_stock"`) olarak çıkarılmıştı. Yani tip
+artık gerçekten güçlü; `any`'ye düşüp testi sessizce geçiren bir çözüm değil.
+
+Pratik sonuç: seçim metnine bir sütun eklenip `RawListRow`'a eklenmezse (veya
+tersi) **derleyici hata verir**. Cast'li hâlde bu sapma sessizce kaçardı ve
+çalışma zamanında `undefined` olarak ortaya çıkardı.
+
+## 36. Faz 3'ün bilinen açıkları
+
+- **Parola sıfırlama akışı yok.** Tek yönetici modelinde Supabase panelinden yapılır.
+  Panelde "parolamı unuttum" bağlantısı bilinçli olarak yoktur — e-posta gönderimi
+  yapılandırılmadan eklenirse çalışmayan bir bağlantı olurdu.
+- **Yönetici davet/ekleme arayüzü yok.** Yetki yalnız `admin_users` tablosuna satır
+  eklenerek verilir; panelden talep edilemez. Bu bilinçlidir (Faz 3 kapsamı: tek
+  yönetici).
+- **Görsel sıralaması sürükle-bırak değil**, yukarı/aşağı butonlarıyla yapılır.
+  Sürükle-bırak klavye ve dokunmatik desteği gerektiren kırılgan bir etkileşimdir;
+  butonlar her girdi yöntemiyle çalışır.
+- **Görsel kırpma/optimizasyon yok.** Yüklenen dosya olduğu gibi saklanır; boyut
+  düşürme `next/image` tarafında yapılır. Kaynak dosya 5 MB ile sınırlıdır.
+- **Denetim kaydı (audit log) yok.** Kimin neyi ne zaman değiştirdiği tutulmuyor.
+  Tek yönetici varken maliyeti faydasından fazla; çok yönetici gerekirse eklenmeli.

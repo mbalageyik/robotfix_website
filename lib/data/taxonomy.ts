@@ -91,7 +91,7 @@ export async function listDeviceModels(brandSlug?: string): Promise<DataResult<D
   const { data, error } = await query;
 
   if (error) return fail("query_failed", error.message, error.code);
-  return ok(data as unknown as DeviceModelRow[]);
+  return ok(data);
 }
 
 // --- Hizmetler ------------------------------------------------------------

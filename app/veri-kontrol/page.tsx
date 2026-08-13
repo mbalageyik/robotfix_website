@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ADMIN_ROBOTS } from "@/lib/admin/robots";
 import { AvailabilityBadge } from "@/components/ui/AvailabilityBadge";
 import { Card } from "@/components/ui/Card";
 import { Container } from "@/components/layout/Container";
@@ -33,9 +34,14 @@ import type { ProductDetail, ProductListItem } from "@/lib/data/types";
   alınmış demektir.
 */
 
+/*
+  Teşhis sayfası da panel gibi indekslenmez. Direktif elle YAZILMAZ,
+  `ADMIN_ROBOTS`'tan gelir: iki ayrı yerde tutulsaydı biri güncellenip diğeri
+  unutulabilirdi (burada `googleBot` alt-direktifi zaten eksikti).
+*/
 export const metadata: Metadata = {
   title: "Veri Kontrol",
-  robots: { index: false, follow: false, nocache: true },
+  robots: ADMIN_ROBOTS,
 };
 
 // Veri her zaman taze okunsun; bu bir teşhis sayfasıdır.
