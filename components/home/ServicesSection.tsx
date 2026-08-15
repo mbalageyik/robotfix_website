@@ -1,8 +1,7 @@
-import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/layout/Section";
 import { SectionHeading } from "@/components/home/SectionHeading";
+import { ServicePanels, type ServicePanelItem } from "@/components/home/ServicePanels";
 import { WhatsAppButton } from "@/components/whatsapp/WhatsAppButton";
-import { getServiceIcon } from "@/components/ui/icons";
 import { whatsappCtaLabels } from "@/lib/site-config";
 import type { DataResult } from "@/lib/data/result";
 import type { ServiceRow } from "@/lib/data/types";
@@ -10,19 +9,49 @@ import type { ServiceRow } from "@/lib/data/types";
 /*
   Teknik servis hizmetleri (bilgi dosyası §5, §13/6).
 
-  Hizmet DETAY sayfası henüz yoktur; bu yüzden kartlar BAĞLANTI TAŞIMAZ.
-  Var olmayan bir sayfaya link vermektense kartı bağlantısız bırakmak
-  doğrudur; bölümün sonundaki WhatsApp CTA'sı gerçek çıkış yoludur.
+  SUNUM: hizmetler yatayda genişleyen panel şeridinde gösterilir
+  (`ServicePanels`, istemci bileşeni). VERİ VE GÖRÜNÜRLÜK DESENİ DEĞİŞMEDİ:
+  satırlar yine `listServices()` ile gelir, sorguda `status` filtresi
+  yazılmaz, görünürlüğü RLS belirler.
 
-  Simge `services.icon_key` üzerinden gelir ve yalnız tanınan anahtarlarda
-  gösterilir. Simge tek gösterge değildir: hizmet adı her zaman metindir.
+  BU DOSYA NEDEN SUNUCUDA KALDI:
+  `WhatsAppButton` numarayı site ayarlarından okuyan ASENKRON bir sunucu
+  bileşenidir; bir istemci bileşeninin içinde oluşturulamaz. Bu yüzden her
+  panelin CTA'sı BURADA üretilir ve hazır bir düğüm olarak şeride geçirilir.
+  Yan kazanç: CTA'lar ve hizmet adları istemci paketine girmeden sunucu
+  HTML'inde yer alır — JS yüklenmese de hizmetler okunur ve WhatsApp'a
+  ulaşılır (bilgi dosyası §14).
 
-  VERİ YOKSA BÖLÜM RENDER EDİLMEZ — hizmet başlıkları koda gömülmez, çünkü
-  hizmet kapsamı işletme tarafından yönetilen bir veridir.
+  HİZMET DETAY SAYFASI YOK: bu yüzden CTA var olmayan bir sayfaya değil,
+  WhatsApp servis şablonuna gider (`lib/whatsapp.ts`).
+
+  VERİ YOKSA BÖLÜM RENDER EDİLMEZ — Faz 5'teki davranış korunur. Hizmet
+  başlıkları koda gömülmez; hizmet kapsamı işletmenin yönettiği bir veridir.
 */
 
 export function ServicesSection({ result }: { result: DataResult<ServiceRow[]> }) {
   if (!result.ok || result.data.length === 0) return null;
+
+  const items: ServicePanelItem[] = result.data.map((service) => ({
+    id: service.id,
+    name: service.name,
+    description: service.short_description,
+    iconKey: service.icon_key,
+    /*
+      Mesaj gövdesi ORTAK şablondan gelir ve hizmete göre uydurulmaz.
+      `buildServiceMessage` marka/model ve sorun alanlarını müşterinin
+      doldurması için yer tutucuyla bırakır; hizmet adını "yaşadığım sorun"
+      diye yazmak (ör. "Periyodik Bakım") yanlış bir cümle kurardı.
+    */
+    cta: (
+      <WhatsAppButton
+        intent="service"
+        label="WhatsApp’tan Sor"
+        size="sm"
+        event="whatsapp_service_panel_click"
+      />
+    ),
+  }));
 
   return (
     <Section id="hizmetler" labelledBy="hizmetler-baslik" width="wide">
@@ -33,24 +62,13 @@ export function ServicesSection({ result }: { result: DataResult<ServiceRow[]> }
         description="Cihazınızda hangi işlem gerektiğinden emin değilseniz, arızayı yazmanız yeterli."
       />
 
-      <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {result.data.map((service) => {
-          const ServiceIcon = getServiceIcon(service.icon_key);
+      <ServicePanels items={items} />
 
-          return (
-            <li key={service.id} className="flex">
-              <Card className="flex w-full flex-col gap-3">
-                {ServiceIcon && <ServiceIcon className="size-7 text-link" />}
-                <h3 className="text-h4">{service.name}</h3>
-                {service.short_description && (
-                  <p className="text-body text-text-muted">{service.short_description}</p>
-                )}
-              </Card>
-            </li>
-          );
-        })}
-      </ul>
-
+      {/*
+        Şeridin altındaki genel çıkış: panel seçiminden bağımsız, sabit
+        konumlu bir servis talebi yolu. Panel CTA'sı seçilen hizmetin
+        bağlamında, bu ise "hangisi olduğundan emin değilim" durumundadır.
+      */}
       <div className="mt-8">
         <WhatsAppButton
           intent="service"

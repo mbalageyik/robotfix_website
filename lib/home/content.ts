@@ -13,6 +13,44 @@
 */
 
 // ---------------------------------------------------------------------------
+// Açılış (hero) — bilgi dosyası §13/1
+// ---------------------------------------------------------------------------
+/*
+  İÇERİK SÖZLEŞMESİ (Faz 5'ten devralındı, DEĞİŞTİRİLMEDİ):
+  Başlık, değer önerisi ve iki CTA hero'nun görsel sunumu ne olursa olsun
+  DOM'da metin olarak kalır (bilgi dosyası §14: "Temel ürün, hizmet ve
+  iletişim bilgileri 3D sahne yüklenmese bile erişilebilir olmalıdır").
+
+  Metinler buraya Faz 6'da TAŞINDI — yeniden yazılmadı. Önceden bileşenin
+  içinde satır içiydi; sunumu değişen bir bileşenin metni de birlikte
+  değişmesin diye tek kaynağa alındı.
+*/
+export const HERO_CONTENT = {
+  /* Üst etikette marka adı YOKTUR — aşağıdaki büyütme kuralına bakınız. */
+  overline: "Gaziantep · Robot süpürge teknik servisi ve yedek parça",
+  title: "Robot süpürgeniz için parça ve teknik servis",
+  body:
+    "Robot Fix; robot süpürgelerin bakımını, onarımını ve yedek parça tedarikini tek bir " +
+    "uzmanlık altında toplar. Cihazınızın markasını ve modelini iletin, uygun çözümü birlikte " +
+    "belirleyelim.",
+  primaryCtaLabel: "Ürünleri İncele",
+  primaryCtaHref: "/urunler",
+  /*
+    GÖRSEL YER TUTUCUDUR. Projede gerçek ürün/servis fotoğrafı yoktur ve
+    stok görsel hotlink edilmez. Dosyanın kendi içinde de gerekçe yazılıdır.
+    TODO(business): gerçek fotoğraf sağlandığında hem dosya hem bu alt metni
+    güncellenecek.
+  */
+  image: {
+    src: "/gorseller/hero-ornek-gorsel.svg",
+    /* Alt metin görselin YER TUTUCU olduğunu da söyler — sessizce gerçekmiş gibi sunulmaz. */
+    alt: "[ÖRNEK] Robot süpürgenin üstten görünümünü anlatan çizim — gerçek ürün fotoğrafı yerine kullanılan yer tutucu",
+    width: 1200,
+    height: 750,
+  },
+} as const;
+
+// ---------------------------------------------------------------------------
 // Değer önerisi (bilgi dosyası §2 — konumlandırma)
 // ---------------------------------------------------------------------------
 

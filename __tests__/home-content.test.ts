@@ -1,10 +1,11 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   BRANDS_DISCLAIMER,
   COMPATIBILITY_CONTENT,
+  HERO_CONTENT,
   FAQ_ITEMS,
   MARKETPLACE_CONTENT,
   SERVICE_PROCESS,
@@ -69,7 +70,7 @@ describe("taranan dosya kümesi", () => {
   it("bölüm bileşenlerini gerçekten buluyor", () => {
     // Yol yanlışsa testler sessizce "geçmemeli".
     expect(HOMEPAGE_FILES.length).toBeGreaterThan(10);
-    expect(HOMEPAGE_FILES).toContain("components/home/HeroPlaceholder.tsx");
+    expect(HOMEPAGE_FILES).toContain("components/home/Hero.tsx");
   });
 });
 
@@ -188,6 +189,7 @@ describe("üst etiketlerde marka adı (Türkçe büyütme tuzağı)", () => {
 
   it("içerik kaynağındaki hiçbir overline marka adı taşımaz", () => {
     const overlines = [
+      HERO_CONTENT.overline,
       VALUE_PROPOSITION.overline,
       COMPATIBILITY_CONTENT.overline,
       SERVICE_PROCESS.overline,
@@ -320,28 +322,207 @@ describe("bölüm kaydı (HOMEPAGE_SECTIONS)", () => {
   });
 });
 
-describe("hero yer tutucusu", () => {
-  const hero = readFileSync(join(root, "components/home/HeroPlaceholder.tsx"), "utf8");
+describe("hizmet panelleri (yatay şerit)", () => {
+  /*
+    Faz 6: hizmet kartları yatayda genişleyen panellere dönüştü. Testin
+    koruduğu şey görsel sunum değil, ERİŞİLEBİLİRLİK SÖZLEŞMESİDİR —
+    genişleyen panel deseninin klavyeyle kullanılamaz hâle gelmesi bu
+    dönüşümün en olası regresyonudur.
+  */
+  const panels = readFileSync(join(root, "components/home/ServicePanels.tsx"), "utf8");
+  const section = readFileSync(join(root, "components/home/ServicesSection.tsx"), "utf8");
+  const panelCode = stripComments(panels);
 
-  it("değiştirileceği kod içinde işaretlidir", () => {
-    expect(hero).toContain("TODO: hero-decision");
+  it("panel hedefi gerçek bir <button>, div değil", () => {
+    expect(panelCode).toMatch(/<button\b/);
+    expect(panelCode).toContain('type="button"');
   });
 
-  it("3D, canvas, video veya animasyon içermez", () => {
-    /*
-      Yorumlar hariç tutulur: kuralın kendisi ("Canvas'ta metin yok") bölümün
-      başındaki gerekçede ALINTILANIR — alıntı bir ihlal değildir.
-    */
-    const code = stripComments(hero);
+  it("açık/kapalı durumu ekran okuyucuya bildirilir", () => {
+    expect(panelCode).toContain("aria-expanded={isActive}");
+    expect(panelCode).toContain("aria-controls={contentId}");
+    // Bildirilen içerik gerçekten var olmalı.
+    expect(panelCode).toContain("id={contentId}");
+  });
 
-    for (const forbidden of ["Canvas", "three", "<video", "animate-", "motion."]) {
-      expect(code, `Hero kararı verilmeden ${forbidden} eklenmez`).not.toContain(forbidden);
+  it("klavyeyle açılır — fare tek giriş yolu değil", () => {
+    expect(panelCode).toMatch(/onFocus=\{\(\)\s*=>\s*setActiveId/);
+    expect(panelCode).toMatch(/onClick=\{\(\)\s*=>\s*setActiveId/);
+  });
+
+  it("kapalı panelde odaklanılabilir gizli bağlantı bırakılmaz", () => {
+    /*
+      Görünmez ama odaklanılabilir bir CTA, klavye kullanıcısı için
+      "kaybolan odak" tuzağıdır. CTA yalnız açık panelde var olur.
+    */
+    expect(panelCode).toMatch(/\{isActive && <div className="pointer-events-auto">/);
+  });
+
+  it("hizmet adı her durumda METİN olarak durur (simge tek gösterge değil)", () => {
+    // Ad butonun içinde; simge dekoratiftir.
+    expect(panelCode).toContain("{item.name}");
+    expect(panelCode).toMatch(/aria-hidden="true"[\s\S]{0,400}ServiceIcon/);
+  });
+
+  it("mevcut simge sistemi yeniden kullanılır", () => {
+    expect(panels).toContain("getServiceIcon");
+    expect(panels).toContain('from "@/components/ui/icons"');
+  });
+
+  it("stok görsel veya yeni ikon paketi getirilmez", () => {
+    for (const forbidden of ["unsplash", "pexels", "lucide", "images.", "http://", "https://"]) {
+      expect(panelCode.toLowerCase(), `${forbidden} kullanılamaz`).not.toContain(forbidden);
     }
   });
 
-  it("iki CTA'yı da DOM metni olarak taşır", () => {
-    expect(hero).toContain("Ürünleri İncele");
+  it("veri ve CTA sunucuda üretilir, istemciye metin gömülmez", () => {
+    expect(section).not.toContain('"use client"');
+    expect(section).toContain("WhatsAppButton");
+    /*
+      Şerit yalnız sunum yapar: veriyi `items` olarak dışarıdan alır. Kontrol
+      yorumsuz kod üzerinde yapılır — gerekçe yorumları bileşenin adını
+      ALINTILAR, alıntı bir ihlal değildir.
+    */
+    expect(panels).toContain('"use client"');
+    expect(panelCode).not.toContain("WhatsAppButton");
+    expect(panelCode).not.toContain("listServices");
+  });
+
+  it("boş/hatalı veri davranışı Faz 5'ten korunur", () => {
+    expect(stripComments(section)).toMatch(
+      /if\s*\(!result\.ok \|\| result\.data\.length === 0\)\s*return null;/,
+    );
+  });
+
+  it("geçişler tasarım sistemi tokenlarını kullanır", () => {
+    // Rastgele süre/eğri değil: `app/globals.css` içindeki hareket tokenları.
+    expect(panelCode).toContain("duration-(--duration-slow)");
+    expect(panelCode).toContain("ease-(--ease-emphasized)");
+  });
+});
+
+describe("bağımlılık sınırı", () => {
+  it("ikon paketi bağımlılığı eklenmedi", () => {
+    /*
+      Simge seti el yazımıdır (`components/ui/icons.tsx`). Referans desenler
+      `lucide-react` kullanıyordu; onu getirmek kendi simge dilimizi ikinci
+      bir kaynakla bölerdi.
+    */
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const all = { ...pkg.dependencies, ...pkg.devDependencies };
+
+    for (const forbidden of ["lucide-react", "@heroicons/react", "react-icons"]) {
+      expect(all, `${forbidden} eklenmemeli`).not.toHaveProperty(forbidden);
+    }
+  });
+});
+
+describe("açılış bölümü (hero)", () => {
+  /*
+    Faz 6: yer tutucu hero, kaydırmaya bağlı kart sahnesiyle DEĞİŞTİ. Testin
+    koruduğu şey sunum değil, SÖZLEŞMEDİR (bilgi dosyası §14 + CLAUDE.md):
+    başlık, değer önerisi ve iki CTA hareketten bağımsız olarak DOM'da metin
+    kalır; hareket kullanıcı tercihine saygı duyar.
+  */
+  const hero = readFileSync(join(root, "components/home/Hero.tsx"), "utf8");
+  const stage = readFileSync(join(root, "components/home/HeroScrollStage.tsx"), "utf8");
+
+  it("metin sözleşmesi tek kaynaktan gelir, bileşende yeniden yazılmaz", () => {
+    expect(hero).toContain("HERO_CONTENT");
+    // Metin gövdesi bileşene kopyalanmamalı.
+    expect(hero).not.toContain("Robot Fix; robot süpürgelerin");
+  });
+
+  it("iki CTA da sunucu tarafında üretilir", () => {
+    expect(hero).toContain("HERO_CONTENT.primaryCtaLabel");
+    expect(hero).toContain("HERO_CONTENT.primaryCtaHref");
     expect(hero).toContain("whatsappCtaLabels.productInfo");
-    expect(hero).toContain('href="/urunler"');
+    expect(HERO_CONTENT.primaryCtaHref).toBe("/urunler");
+  });
+
+  it("metin ve CTA'lar istemci bileşenine TAŞINMAZ", () => {
+    /*
+      Bu, JS'siz erişilebilirliğin kod düzeyindeki güvencesi: sahne yalnız
+      sunum yapar, metni `header`/`children` olarak DIŞARIDAN alır. Metin
+      buraya yazılırsa sunucu HTML'i yine üretir ama sözleşme sessizce
+      istemciye kayar.
+    */
+    expect(stage).toContain('"use client"');
+    expect(stage).not.toContain("HERO_CONTENT");
+    expect(stage).not.toContain("Ürünleri İncele");
+    expect(stage).not.toContain("WhatsAppButton");
+  });
+
+  it("hero sunucu bileşeni olarak kalır (asenkron WhatsApp butonu için şart)", () => {
+    expect(hero).not.toContain('"use client"');
+    expect(hero).toContain("WhatsAppButton");
+  });
+
+  it("azaltılmış hareket tercihi JS OLMADAN da uygulanır", () => {
+    /*
+      Asıl güvence CSS'tedir: global katman yalnız animasyon/geçiş süresini
+      kısar, JS'in yazdığı satır içi `transform`u durduramaz. Bu yüzden
+      dönüşümü `!important` ile sıfırlayan ayrı bir kural gerekir — ve o
+      kural hidrasyon beklemez, JS hiç çalışmasa bile geçerlidir.
+    */
+    const css = readFileSync(join(root, "app/globals.css"), "utf8");
+    const reducedBlock = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+
+    expect(reducedBlock).toContain("[data-rf-scroll-motion]");
+    expect(reducedBlock).toMatch(/\[data-rf-scroll-motion\]\s*\{\s*transform:\s*none\s*!important/);
+    // Kuralın hedefi gerçekten hareket eden öğelere konmuş olmalı.
+    expect(stage.match(/data-rf-scroll-motion/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("hareket hesabı hidrasyondan sonra tümüyle bırakılır", () => {
+    const code = stripComments(stage);
+
+    expect(code).toContain("(prefers-reduced-motion: reduce)");
+    expect(code).toMatch(/prefersReducedMotion\s*\?/);
+  });
+
+  it("medya sorgusu hidrasyon güvenli okunur", () => {
+    /*
+      Sunucu medya sorgusunu bilemez. Değeri bir efektle sonradan yazmak,
+      sunucu HTML'i ile ilk istemci render'ını çeliştirir ve React öznitelik
+      uyuşmazlığını YAMALAMAZ — kart sessizce yanlış stille kalırdı.
+      `useSyncExternalStore` bu iş için vardır: `getServerSnapshot` hidrasyon
+      boyunca kullanılır, sonra gerçek değere geçilir.
+    */
+    const code = stripComments(stage);
+
+    expect(code).toContain("useSyncExternalStore");
+    // Tercih efektle state'e yazılmamalı (React 19 `set-state-in-effect`).
+    expect(code).not.toMatch(/useEffect\([^)]*setMounted/);
+  });
+
+  it("3D, canvas veya video kütüphanesi getirmez", () => {
+    // İzin verilen tek hareket bağımlılığı framer-motion'dır.
+    const code = stripComments(hero) + stripComments(stage);
+
+    for (const forbidden of ["Canvas", "three", "<video", "@react-three"]) {
+      expect(code, `${forbidden} bu görevin kapsamı dışındadır`).not.toContain(forbidden);
+    }
+  });
+
+  it("kaldırılan yer tutucu geri gelmez", () => {
+    expect(hero).not.toContain("TODO: hero-decision");
+    expect(existsSync(join(root, "components/home/HeroPlaceholder.tsx"))).toBe(false);
+  });
+
+  it("görsel yer tutucu olduğunu alt metninde açıkça söyler", () => {
+    // Sessizce gerçek ürün fotoğrafıymış gibi sunulmaz.
+    expect(HERO_CONTENT.image.alt).toContain("[ÖRNEK]");
+    expect(HERO_CONTENT.image.alt.length).toBeGreaterThan(20);
+  });
+
+  it("stok görsel hotlink edilmez", () => {
+    // Görsel projenin kendi varlığıdır; harici bir adresten çekilmez.
+    expect(HERO_CONTENT.image.src.startsWith("/")).toBe(true);
+    expect(existsSync(join(root, "public", HERO_CONTENT.image.src))).toBe(true);
+    expect(hero).not.toMatch(/unsplash|pexels|https?:\/\//i);
   });
 });

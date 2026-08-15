@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750" role="img" aria-labelledby="hero-ornek-baslik">
+  <title id="hero-ornek-baslik">[ÖRNEK] Robot süpürge üstten görünüm çizimi — yer tutucu</title>
+
+  <!--
+    ============================================================================
+    YER TUTUCU GÖRSEL — GERÇEK FOTOĞRAF DEĞİLDİR.
+
+    Projede hiçbir gerçek ürün/servis fotoğrafı yoktur: `public/` boştu ve
+    tohum verisindeki `storage_path` değerlerinin Supabase Storage'da karşılığı
+    yoktur (bkz. supabase/seed.sql, "KARŞILIĞI OLMAYAN yer tutucu" notu).
+
+    Stok görsel HOTLINK EDİLMEDİ (tahmini Unsplash/Pexels adresi kullanmak hem
+    telif hem kırık bağlantı riskidir). Bunun yerine bu dosya markanın kendi
+    çizim dilinde ELDE ÜRETİLDİ ve ekranda `[ÖRNEK]` ibaresiyle AÇIKÇA
+    işaretlenir — projenin demo içerik politikasıyla aynı ilke.
+
+    TODO(business): işletme gerçek ürün/servis fotoğrafını sağladığında bu
+    dosya değiştirilecek. Yayına bu görselle çıkılmaz.
+
+    RENKLER: app/globals.css içindeki onaylı palet (§15) değerleridir.
+    Varlık dosyası olduğu için hex burada yazılabilir; bileşen kodunda
+    yazılamaz (__tests__/source-hygiene.test.ts).
+      #0B0F14 sinematik zemin · #0B1F33 gece laciverti · #123B5D servis lac.
+      #1769AA güven mavisi   · #3FC7D3 hassas camgöbeği · #D7E0E8 sis grisi
+    ============================================================================
+  -->
+
+  <defs>
+    <radialGradient id="rf-zemin" cx="50%" cy="42%" r="72%">
+      <stop offset="0%" stop-color="#123B5D" />
+      <stop offset="62%" stop-color="#0B1F33" />
+      <stop offset="100%" stop-color="#0B0F14" />
+    </radialGradient>
+
+    <linearGradient id="rf-govde" x1="24%" y1="8%" x2="78%" y2="96%">
+      <stop offset="0%" stop-color="#1B4E77" />
+      <stop offset="55%" stop-color="#123B5D" />
+      <stop offset="100%" stop-color="#0B1F33" />
+    </linearGradient>
+
+    <linearGradient id="rf-tarama" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3FC7D3" stop-opacity="0" />
+      <stop offset="50%" stop-color="#3FC7D3" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#3FC7D3" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#rf-zemin)" />
+
+  <!-- Zemin ızgarası: teknik/ölçüm hissi, dikkat dağıtmayacak opaklıkta -->
+  <g stroke="#3FC7D3" stroke-opacity="0.07" stroke-width="1">
+    <path d="M0 150h1200M0 300h1200M0 450h1200M0 600h1200" />
+    <path d="M150 0v750M300 0v750M450 0v750M600 0v750M750 0v750M900 0v750M1050 0v750" />
+  </g>
+
+  <!-- Navigasyon tarama halkaları -->
+  <g fill="none" stroke="#3FC7D3" stroke-opacity="0.16">
+    <circle cx="600" cy="392" r="268" stroke-width="1.5" />
+    <circle cx="600" cy="392" r="322" stroke-width="1.5" stroke-dasharray="5 13" />
+  </g>
+
+  <!-- Cihaz gövdesi (üstten görünüm) -->
+  <g>
+    <ellipse cx="600" cy="424" rx="212" ry="30" fill="#0B0F14" opacity="0.5" />
+    <circle cx="600" cy="392" r="208" fill="url(#rf-govde)" stroke="#3FC7D3" stroke-opacity="0.34" stroke-width="2.5" />
+    <circle cx="600" cy="392" r="176" fill="none" stroke="#0B0F14" stroke-opacity="0.45" stroke-width="2" />
+
+    <!-- Tampon yayı (ön taraf) -->
+    <path d="M600 184a208 208 0 0 0-183 108" fill="none" stroke="#3FC7D3" stroke-opacity="0.5" stroke-width="7" stroke-linecap="round" />
+
+    <!-- LiDAR kulesi -->
+    <circle cx="600" cy="392" r="72" fill="#0B1F33" stroke="#1769AA" stroke-width="3" />
+    <circle cx="600" cy="392" r="44" fill="#0B0F14" stroke="#3FC7D3" stroke-opacity="0.6" stroke-width="2.5" />
+    <circle cx="600" cy="392" r="15" fill="#3FC7D3" fill-opacity="0.85" />
+
+    <!-- Tarama ışını -->
+    <path d="M600 392 L 872 300 A 288 288 0 0 0 826 214 Z" fill="url(#rf-tarama)" opacity="0.75" />
+
+    <!-- Yan fırça -->
+    <g stroke="#3FC7D3" stroke-opacity="0.75" stroke-width="5" stroke-linecap="round">
+      <circle cx="452" cy="256" r="20" fill="#0B1F33" stroke-width="3" />
+      <path d="M452 236v-26M470 244l18-19M470 268l19 18M434 244l-18-19M434 268l-19 18" />
+    </g>
+
+    <!-- Ana fırça yuvası -->
+    <rect x="500" y="536" width="200" height="34" rx="17" fill="#0B0F14" stroke="#1769AA" stroke-opacity="0.7" stroke-width="2.5" />
+    <g stroke="#3FC7D3" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round">
+      <path d="M524 546v14M556 546v14M588 546v14M620 546v14M652 546v14M676 546v14" />
+    </g>
+
+    <!-- Tekerlekler -->
+    <rect x="392" y="472" width="46" height="86" rx="23" fill="#0B0F14" stroke="#1769AA" stroke-opacity="0.6" stroke-width="2.5" />
+    <rect x="762" y="472" width="46" height="86" rx="23" fill="#0B0F14" stroke="#1769AA" stroke-opacity="0.6" stroke-width="2.5" />
+  </g>
+
+  <!-- AÇIK YER TUTUCU İŞARETİ — gerçek fotoğrafla karıştırılmasın diye -->
+  <g>
+    <rect x="60" y="60" width="268" height="52" rx="10" fill="#0B0F14" fill-opacity="0.72" stroke="#3FC7D3" stroke-opacity="0.45" stroke-width="1.5" />
+    <text x="84" y="93"
+          font-family="ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="21" font-weight="600" letter-spacing="1.6" fill="#D7E0E8">[ÖRNEK GÖRSEL]</text>
+  </g>
+
+  <text x="60" y="700"
+        font-family="ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="19" fill="#D7E0E8" fill-opacity="0.62">Gerçek ürün fotoğrafı eklenecek</text>
+</svg>

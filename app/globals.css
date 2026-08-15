@@ -197,6 +197,18 @@
   --shadow-raised: 0 1px 2px rgb(11 31 51 / 0.06), 0 1px 3px rgb(11 31 51 / 0.04);
   --shadow-overlay: 0 12px 32px rgb(11 31 51 / 0.14), 0 2px 8px rgb(11 31 51 / 0.08);
 
+  /*
+    Açılış kartının yükselti gölgesi (Faz 6).
+    Kaynak desen SİYAH bir gölge yığını kullanıyordu (#0000004d…); siyah, Gece
+    Laciverti zemin üzerinde gri bir is lekesi gibi durur ve paletin dışına
+    çıkar. Bu yüzden gölge Gece Laciverti'nin (11 31 51) kendi tonundan
+    üretildi: koyu zeminde derinlik verir, renk kirliliği yapmaz.
+    Katmanlar yakından uzağa yumuşayarak açılır (kart "havada" dursun diye).
+  */
+  --shadow-hero:
+    0 8px 18px rgb(11 31 51 / 0.42), 0 26px 44px rgb(11 31 51 / 0.34),
+    0 54px 76px rgb(11 31 51 / 0.24), 0 96px 110px rgb(11 31 51 / 0.14);
+
   /* ===== Bölüm ritmi ===== */
   --spacing-section: clamp(3.5rem, 2rem + 6vw, 7rem);
   --spacing-section-tight: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
@@ -360,5 +372,22 @@
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /*
+    KAYDIRMAYA BAĞLI DÖNÜŞÜMLER (Faz 6 — açılış kartı).
+
+    Yukarıdaki kural CSS animasyon ve geçişlerini kısar; JS'in her karede
+    yazdığı SATIR İÇİ `transform` onun kapsamına girmez. Bu yüzden hareketi
+    burada ayrıca ve KESİN olarak durduruyoruz: yazar sayfasındaki
+    `!important`, satır içi normal bildirimi geçersiz kılar.
+
+    Bu kural JS'ten ÖNCE ve JS OLMADAN da çalışır — hidrasyon beklenmez,
+    tercihe ilk boyamadan itibaren uyulur. `HeroScrollStage` içindeki
+    `useReducedMotion` kontrolü bunun yerine geçmez, tamamlar: o da
+    hidrasyondan sonra kare kare hesabı tümüyle bırakır.
+  */
+  [data-rf-scroll-motion] {
+    transform: none !important;
   }
 }

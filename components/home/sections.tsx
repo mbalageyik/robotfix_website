@@ -5,7 +5,7 @@ import { CompatibilitySection } from "@/components/home/CompatibilitySection";
 import { ContactSection } from "@/components/home/ContactSection";
 import { FaqSection } from "@/components/home/FaqSection";
 import { FeaturedProductsSection } from "@/components/home/FeaturedProductsSection";
-import { HeroPlaceholder } from "@/components/home/HeroPlaceholder";
+import { Hero } from "@/components/home/Hero";
 import { MarketplaceSection } from "@/components/home/MarketplaceSection";
 import { ServiceProcessSection } from "@/components/home/ServiceProcessSection";
 import { ServicesSection } from "@/components/home/ServicesSection";
@@ -67,10 +67,10 @@ export interface HomeSection {
 export const HOMEPAGE_SECTIONS: readonly HomeSection[] = [
   {
     id: "giris",
-    label: "Açılış (geçici yer tutucu)",
+    label: "Açılış — kaydırmaya bağlı kart",
     contentStatus: "live",
     enabled: true,
-    render: () => <HeroPlaceholder />,
+    render: () => <Hero />,
   },
   {
     id: "hakkinda",

@@ -21,11 +21,14 @@ import { getSiteConfig, siteUrl } from "@/lib/site-config";
   marka ve hizmet bölümleri boş döner; bu beklenen durumdur ve sahte içerikle
   doldurulmaz.
 
-  İSTEMCİ JS: sayfada tek bir istemci bileşeni yoktur. Tüm bölümler sunucuda
-  render edilir; SSS'nin açılır davranışı `<details>` ile tarayıcıya aittir.
+  İSTEMCİ JS: sayfadaki TEK istemci bileşeni açılış sahnesidir
+  (`components/home/HeroScrollStage.tsx`) ve yalnız kaydırmaya bağlı dönüşümü
+  yürütür. Metinlerin hiçbiri istemci paketine girmez; hepsi sunucuda üretilip
+  sahneye geçirilir. SSS'nin açılır davranışı `<details>` ile tarayıcıya aittir.
 
-  HERO: `giris` bölümü GEÇİCİ bir yer tutucudur — gerçek sinematik/3D açılış
-  ayrı bir tasarım kararı bekler (bkz. `components/home/HeroPlaceholder.tsx`).
+  HERO: `giris` bölümü artık kaydırmaya bağlı kart sahnesidir
+  (`components/home/Hero.tsx`). Görsel HÂLÂ yer tutucudur — gerçek ürün
+  fotoğrafı işletmeden bekleniyor.
 */
 
 /** Katalogla aynı tazelik penceresi: panelden yapılan değişiklik 5 dk içinde yansır. */
