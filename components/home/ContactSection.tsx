@@ -32,7 +32,7 @@ export function ContactSection({ siteConfig }: { siteConfig: ResolvedSiteConfig 
         description="Marka, model ve yaşadığınız sorunu iletin; uygun çözümü konuşalım."
       />
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+      <div className="mt-(--spacing-heading-gap) grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
         <div className="grid gap-5 sm:grid-cols-2">
           {addressLine && (
             <Card className="flex flex-col gap-2">

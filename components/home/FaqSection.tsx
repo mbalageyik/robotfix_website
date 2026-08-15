@@ -30,7 +30,7 @@ export function FaqSection() {
         description="Sorunuzun cevabı burada yoksa doğrudan yazabilirsiniz."
       />
 
-      <div className="mt-8 flex flex-col">
+      <div className="mt-(--spacing-heading-gap) flex flex-col">
         {FAQ_ITEMS.map((item) => (
           <details key={item.question} className="group border-b border-border py-2 first:border-t">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 text-body-lg font-semibold text-text hover:text-link">

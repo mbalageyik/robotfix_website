@@ -36,7 +36,7 @@ export function TrustSection({ siteConfig }: { siteConfig: ResolvedSiteConfig })
         description="Cihazınızı teslim edebileceğiniz gerçek bir işletme adresi ve çalışma saatleri."
       />
 
-      <div className="mt-8 grid gap-5 sm:grid-cols-2">
+      <div className="mt-(--spacing-heading-gap) grid gap-5 sm:grid-cols-2">
         {addressLine && (
           <Card className="flex flex-col gap-2">
             <MapPinIcon className="size-6 text-link" />

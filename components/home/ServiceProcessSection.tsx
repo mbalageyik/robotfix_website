@@ -28,7 +28,7 @@ export function ServiceProcessSection() {
         title={SERVICE_PROCESS.title}
       />
 
-      <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="mt-(--spacing-heading-gap) grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {SERVICE_PROCESS.steps.map((step, index) => (
           <li key={step.title} className="flex flex-col gap-2 border-t border-border pt-5">
             <span

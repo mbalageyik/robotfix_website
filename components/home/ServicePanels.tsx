@@ -59,7 +59,7 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
     <ul
       className={cn(
         // Mobil: dikey akordeon (gerekçe ServicesSection'da).
-        "mt-10 flex flex-col gap-2",
+        "mt-(--spacing-heading-gap) flex flex-col gap-2",
         /*
           Masaüstü: sabit yükseklikli yatay şerit.
 

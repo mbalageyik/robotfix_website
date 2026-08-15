@@ -31,11 +31,21 @@ export function CategoriesSection({ result }: { result: DataResult<CategoryRow[]
         description="Aradığınız parçanın türünü seçin, katalog o kategoriye daraltılsın."
       />
 
-      <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-(--spacing-heading-gap) grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {result.data.map((category) => (
           <li key={category.id} className="flex">
             <Card variant="interactive" className="relative flex w-full flex-col gap-2">
-              <h3 className="text-h4">
+              {/*
+                IZGARA KARTI BAŞLIĞI — `text-body-lg font-semibold`.
+
+                Faz 8'de `text-h4`ten indirildi: kategori kartı ile hemen
+                üstündeki ürün kartı yan yana duruyor ve ikisi farklı başlık
+                kademesi kullanıyordu. Ortak kademe, yoğun ızgarada daha iyi
+                çalışan ürün kartınınki seçildi — h4'ün üst ucu (24px) dört
+                sütunlu bir kartta uzun adı üç satıra düşürüyordu.
+                Rol tablosu: `app/globals.css` tipografi rolleri notu.
+              */}
+              <h3 className="text-body-lg font-semibold text-text">
                 <Link
                   href={buildCatalogHref({ categorySlug: category.slug })}
                   className="after:absolute after:inset-0 after:content-[''] hover:text-link focus-visible:text-link"

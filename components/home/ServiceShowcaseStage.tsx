@@ -176,7 +176,7 @@ export function ServiceShowcaseStage({ header, poster, videoSrc }: ServiceShowca
           boyanmış yükselti gölgesi. Değerler tokenlardan gelir; bileşende ham
           renk yazılmaz (`__tests__/source-hygiene.test.ts`).
         */
-        className="relative aspect-16/10 overflow-hidden rounded-xl border border-border-strong bg-surface-sunken shadow-(--shadow-hero) lg:aspect-video"
+        className="relative aspect-16/10 overflow-hidden rounded-xl border border-border-strong bg-surface-sunken shadow-(--shadow-hero) sm:rounded-2xl lg:aspect-video"
       >
         <motion.div style={mediaStyle} data-rf-scroll-motion className="absolute inset-0">
           {poster}

@@ -25,20 +25,39 @@ export type ButtonSize = "sm" | "md" | "lg";
   2.67:1, WhatsApp yeşili 2.18:1. Metin okunuyor ama butonun KENARI zeminden
   ayrışmıyor; WCAG 1.4.11 bunu ihlal sayar.
 */
+/*
+  FAZ 8 — MİKRO-ETKİLEŞİM: dolu butonlar hover/odakta gölgeyi e1'den e2'ye
+  derinleştirir. Renk değişimi zaten vardı; gölge onun üstüne "basılabilir"
+  hissini ekler.
+
+  BUTON KALKMAZ (`.rf-lift` YOK) — bilinçli. Butonlar çoğu yerde yan yana
+  bir CTA satırındadır; birinin 2px yükselmesi komşusuyla taban hizasını
+  gözle bozar. Kart bir yüzeydir ve tek başına durur, buton bir kontroldür
+  ve sırasının içindedir. Bu yüzden geri bildirim burada yalnız DERİNLİK,
+  kartta derinlik + kaldırmadır.
+
+  Geçiş `transition-colors` değil `transition-[colors,box-shadow]` olmalıydı;
+  Tailwind'de bunun karşılığı `transition` yerine iki özelliği de kapsayan
+  `transition-[color,background-color,border-color,box-shadow]`. Süre ve eğri
+  tokenlardan gelir, azaltılmış hareket global katmanda zaten kısar.
+*/
 const base =
   "inline-flex items-center justify-center gap-2 rounded-md border font-semibold " +
-  "transition-colors duration-(--duration-fast) ease-(--ease-standard) " +
+  "transition-[color,background-color,border-color,box-shadow] " +
+  "duration-(--duration-fast) ease-(--ease-standard) " +
   "disabled:cursor-not-allowed disabled:opacity-55 aria-disabled:cursor-not-allowed aria-disabled:opacity-55";
 
+/** Dolu butonların ortak yükselti davranışı — tek yerde yazılır. */
+const filledElevation = "shadow-(--shadow-e1) hover:shadow-(--shadow-e2)";
+
 const variants: Record<ButtonVariant, string> = {
-  primary: "border-button-edge bg-action text-action-fg hover:bg-action-hover",
-  whatsapp:
-    "border-button-edge bg-action-whatsapp text-action-whatsapp-fg hover:bg-action-whatsapp-hover",
-  secondary:
-    "border-button-edge bg-action-secondary text-action-secondary-fg hover:bg-action-secondary-hover",
+  primary: `border-button-edge bg-action text-action-fg hover:bg-action-hover ${filledElevation}`,
+  whatsapp: `border-button-edge bg-action-whatsapp text-action-whatsapp-fg hover:bg-action-whatsapp-hover ${filledElevation}`,
+  secondary: `border-button-edge bg-action-secondary text-action-secondary-fg hover:bg-action-secondary-hover ${filledElevation}`,
+  /* Metin bağlantısı — yüzeyi yoktur, gölgesi de olmaz. */
   ghost:
     "border-transparent bg-transparent text-link underline underline-offset-4 decoration-1 hover:text-link-hover hover:decoration-2",
-  marketplace: "border-border-strong bg-surface-raised text-text hover:border-link hover:text-link",
+  marketplace: `border-border-strong bg-surface-raised text-text hover:border-link hover:text-link ${filledElevation}`,
 };
 
 const sizes: Record<ButtonSize, string> = {

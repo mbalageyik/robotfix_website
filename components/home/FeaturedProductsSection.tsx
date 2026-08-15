@@ -48,7 +48,7 @@ export function FeaturedProductsSection({ result }: { result: DataResult<Product
         }
       />
 
-      <div className="mt-10">
+      <div className="mt-(--spacing-heading-gap)">
         {!result.ok ? (
           <ErrorState
             title={EMPTY_STATES.queryFailed.title}

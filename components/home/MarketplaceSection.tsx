@@ -54,7 +54,7 @@ export function MarketplaceSection({ siteConfig }: { siteConfig: ResolvedSiteCon
       />
 
       {storeLinks.length > 0 ? (
-        <ul className="mt-8 flex flex-wrap gap-3">
+        <ul className="mt-(--spacing-heading-gap) flex flex-wrap gap-3">
           {storeLinks.map((link) => (
             <li key={link.marketplace}>
               {/*
@@ -83,10 +83,12 @@ export function MarketplaceSection({ siteConfig }: { siteConfig: ResolvedSiteCon
           ))}
         </ul>
       ) : (
-        <p className="mt-8 max-w-2xl text-body text-text-muted">{MARKETPLACE_CONTENT.emptyNote}</p>
+        <p className="mt-(--spacing-heading-gap) max-w-2xl text-body text-text-muted">
+          {MARKETPLACE_CONTENT.emptyNote}
+        </p>
       )}
 
-      <p className="mt-6 max-w-2xl text-caption text-text-muted">
+      <p className="mt-8 max-w-2xl text-caption text-text-muted">
         {MARKETPLACE_CONTENT.disclaimer}
       </p>
     </Section>

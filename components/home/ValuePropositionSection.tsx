@@ -14,12 +14,21 @@ import { VALUE_PROPOSITION } from "@/lib/home/content";
   TAŞIYICI AYAK (Faz 7): üç sütun eşit ağırlıktayken §22'nin 1. maddesi
   ("yalnızca yedek parça mağazası olarak değil...") görsel olarak
   duyulmuyordu — teknik servis, iletişim kanalıyla aynı boydaydı. `lead`
-  işaretli ayak artık dar ekranda İLK ve masaüstünde İKİ SÜTUN genişliğinde
-  durur, başlığı bir kademe büyüktür ve üstünde bir vurgu çizgisi taşır.
+  işaretli ayak dar ekranda İLKTİR, başlığı bir kademe büyüktür ve üstünde
+  bir vurgu çizgisi taşır.
 
-  AYRIM YALNIZ RENKLE ANLATILMAZ (CLAUDE.md): fark aynı anda konum, alan ve
-  tipografi farkıdır; vurgu çizgisi bunların üstüne binen dördüncü işarettir.
-  Kaybolan bir bilgi yoktur — üç ayağın metni de tam hâliyle okunur.
+  IZGARA 4 SÜTUNDAN 3'E GERİ ALINDI (Faz 8 — ölçülerek). Taşıyıcı ayağa iki
+  sütun vermek onu büyütmüyor, DİĞER İKİSİNİ EZİYORDU: 1440px'te kalan
+  sütunlar ~215px'e düşüyor, "Doğru parça yönlendirmesi" başlığı iki satıra
+  kırılıyor ve gövdesi yedi satırlık dar, tırtıklı bir sütuna dönüşüyordu.
+  Taşıyıcı ayak ise iki sütunu dolduramayıp altında büyük bir boşluk
+  bırakıyordu. Üç eşit sütunda her kart ~380px olur; vurgu tipografi ve
+  çizgiyle korunur, kimse ezilmez.
+
+  AYRIM YALNIZ RENKLE ANLATILMAZ (CLAUDE.md): fark aynı anda sıra, başlık
+  kademesi ve gövde kademesi farkıdır; vurgu çizgisi bunların üstüne binen
+  dördüncü işarettir. Kaybolan bir bilgi yoktur — üç ayağın metni de tam
+  hâliyle okunur.
 */
 
 export function ValuePropositionSection() {
@@ -32,15 +41,18 @@ export function ValuePropositionSection() {
         description={VALUE_PROPOSITION.body}
       />
 
-      {/*
-        Dört sütunluk ızgara: taşıyıcı ayak ikisini, diğerleri birer sütun
-        kaplar. Üç sütunda bunu yapmak taşıyıcı ayağı tek başına bir satıra
-        iterdi; dörtte üçü de aynı satırda kalır.
-      */}
-      <ul className="mt-10 grid gap-5 md:grid-cols-4">
+      <ul className="mt-(--spacing-heading-gap) grid gap-5 md:grid-cols-3">
         {VALUE_PROPOSITION.pillars.map((pillar) => (
-          <li key={pillar.title} className={cn("flex", pillar.lead && "md:col-span-2")}>
-            <Card className="flex w-full flex-col gap-2">
+          <li key={pillar.title} className="flex">
+            {/*
+              Taşıyıcı ayak `raised` (e2) taşır, diğerleri `default` (e1):
+              yükselti kademesi hiyerarşiyi anlatan beşinci işarettir ve
+              tipografiyle aynı yönü gösterir.
+            */}
+            <Card
+              variant={pillar.lead ? "raised" : "default"}
+              className="flex w-full flex-col gap-2"
+            >
               {pillar.lead && (
                 /* Dekoratif vurgu çizgisi — tek başına anlam taşımaz. */
                 <span aria-hidden="true" className="mb-1 block h-1 w-12 rounded-full bg-link" />

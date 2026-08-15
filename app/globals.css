@@ -211,16 +211,78 @@
   --text-mono--line-height: 1.55;
   --text-mono--letter-spacing: 0;
 
-  /* ===== Köşe yarıçapı ===== */
+  /*
+    ===== TİPOGRAFİ ROLLERİ — hangi kademe nerede (Faz 8) =====
+
+    Ölçek zaten modülerdi (oran 1.25, `clamp` ile akışkan) ve DEĞİŞTİRİLMEDİ.
+    Eksik olan, aynı işi gören öğelerin aynı kademeyi kullanmasıydı: kart
+    başlıkları sayfada üç ayrı boyuttaydı.
+
+      display   → yalnız açılış `h1`
+      h2        → BÖLÜM başlığı. Sayfadaki her bölüm bunu kullanır, istisnasız.
+      h3        → yalnız TAŞIYICI içerik kartı (değer önerisinin `lead` ayağı)
+      h4        → içerik/bilgi kartı başlığı (değer ayakları, adres, çalışma
+                  saatleri, hizmet paneli) ve durum bloğu başlığı
+                  (boş sonuç, hata)
+      body-lg   → bölüm açıklaması VE yoğun IZGARA kartı başlığı
+                  (`font-semibold` ile: ürün kartı, kategori kartı)
+      body      → gövde metni
+      caption   → dipnot, sorumluluk cümlesi, üstveri
+      overline  → bölüm üst etiketi (BÜYÜTÜLEREK basılır — marka adı buraya
+                  yazılamaz; gerekçe `lib/home/content.ts` üst etiket notu)
+
+    IZGARA KARTI ile İÇERİK KARTI neden ayrı: ızgara kartı dört sütunlu bir
+    dizide dar ve yoğundur, başlığı uzun (ürün adı) olabilir; h4'ün üst ucu
+    orada üç satıra düşürür. İçerik kartı üç sütunlu ve nesir ağırlıklıdır,
+    başlığı kısadır ve daha güçlü bir kademeyi taşır.
+  */
+
+  /*
+    ===== Köşe yarıçapı — ROLE GÖRE SEÇİLİR, boyuta göre değil =====
+
+    Ölçek zaten vardı; eksik olan hangi kademenin nerede kullanılacağıydı ve
+    bu yüzden aynı işi gören öğeler farklı yarıçaplarla çıkıyordu. Kural:
+
+      md  → KONTROL       : buton, marka çipi, form alanı, rozet
+      lg  → KART / PANEL   : ürün kartı, kategori kartı, bilgi kartı,
+                             hizmet paneli, durum bloğu
+      xl  → SAHNE ÇERÇEVESİ: açılış kartı, servis vitrini çerçevesi
+                             (geniş ekranda 2xl'e açılır — büyük yüzeyde
+                             aynı yarıçap optik olarak daha keskin görünür)
+
+    sm yalnız iç öğeler içindir (odak halkası, küçük işaret).
+  */
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.875rem;
   --radius-xl: 1.25rem;
   --radius-2xl: 1.75rem;
 
-  /* ===== Gölge — teknik/sakin his için sınır önce, gölge sonra ===== */
-  --shadow-raised: 0 1px 2px rgb(11 31 51 / 0.06), 0 1px 3px rgb(11 31 51 / 0.04);
-  --shadow-overlay: 0 12px 32px rgb(11 31 51 / 0.14), 0 2px 8px rgb(11 31 51 / 0.08);
+  /*
+    ===== YÜKSELTİ (elevation) — üç kademe =====
+
+    Bileşen dili değişmedi: SINIR ÖNCE, GÖLGE SONRA. Ayrım hâlâ 1px sınırla
+    kurulur; gölge yalnız o sınırın üstüne derinlik ekler. Üç kademenin işi:
+
+      e1 → duran yüzey     : kart, panel, çip. Zeminden "bir kâğıt" kadar ayrı.
+      e2 → kaldırılan yüzey: hover/focus durumundaki kart ve buton.
+      e3 → örtü            : açılır katman (menü, diyalog). Sayfa akışının
+                             üstünde durur.
+
+    Üçü de Gece Laciverti'nin (11 31 51) kendi tonundan üretildi — `--shadow-hero`
+    ile aynı gerekçe: siyah gölge bu palette gri bir is lekesi gibi durur.
+    Yeni renk EKLENMEDİ; yalnız mevcut tonun alfa katmanları kullanıldı.
+
+    Katman sayısı kademe başına İKİ ile sınırlı: daha fazlası hem boyama
+    maliyetini hem de "plastik" görünümü artırır.
+
+    KOYU YÜZEYDE e1/e2 `none`'a düşer (aşağıda, `.rf-on-dark`): laciverti
+    laciverti üstüne düşüren bir gölge görünmez, yalnız boyama maliyeti olur.
+    Orada ayrımı sınır taşır (marka kitabı §3.6.1).
+  */
+  --shadow-e1: 0 1px 2px rgb(11 31 51 / 0.05), 0 2px 6px rgb(11 31 51 / 0.05);
+  --shadow-e2: 0 2px 4px rgb(11 31 51 / 0.06), 0 8px 20px rgb(11 31 51 / 0.1);
+  --shadow-e3: 0 12px 32px rgb(11 31 51 / 0.14), 0 2px 8px rgb(11 31 51 / 0.08);
 
   /*
     Açılış kartının yükselti gölgesi (Faz 6).
@@ -234,9 +296,22 @@
     0 8px 18px rgb(11 31 51 / 0.42), 0 26px 44px rgb(11 31 51 / 0.34),
     0 54px 76px rgb(11 31 51 / 0.24), 0 96px 110px rgb(11 31 51 / 0.14);
 
-  /* ===== Bölüm ritmi ===== */
+  /*
+    ===== Bölüm ritmi — 8px ızgarasına oturur =====
+
+    Uç değerler bilinçle 8'in katıdır: 56px (7×8) → 112px (14×8) ve
+    40px (5×8) → 72px (9×8). Arada `clamp` akışkanlığı vardır; ızgara
+    UÇLARDA doğrulanır, her ara pikselde değil.
+
+    `--spacing-heading-gap` YENİ (Faz 8): bölüm başlığı ile içeriği
+    arasındaki boşluk. Daha önce her bölüm bunu kendi seçiyordu — sekiz
+    bölümde `mt-8`, yedisinde `mt-10`, ikisinde `mt-6` vardı. Değerlerin
+    hiçbiri ızgara dışı değildi; sorun TUTARSIZLIKTI, ölçek değil. Tek
+    token: 32px (4×8) → 48px (6×8).
+  */
   --spacing-section: clamp(3.5rem, 2rem + 6vw, 7rem);
   --spacing-section-tight: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
+  --spacing-heading-gap: clamp(2rem, 1.5rem + 2vw, 3rem);
 
   /* ===== Hareket ===== */
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -367,6 +442,21 @@
     /* Marka kitabı §3.6.3: dolu butonlar koyu zeminde kenarlık taşır. */
     --color-button-edge: var(--rf-edge-on-dark);
 
+    /*
+      YÜKSELTİ KOYU ZEMİNDE KAPANIR.
+
+      e1/e2 Gece Laciverti tonundan üretilmiştir; aynı tonun üstüne
+      düştüklerinde GÖRÜNMEZLER — geriye yalnız her karede boyanacak bir
+      gölge katmanı kalır. Ayrımı burada sınır taşır (marka kitabı §3.6.1:
+      "koyu arayüzde kart sınırları görünür olmalı").
+
+      `--shadow-hero` BİLİNÇLİ OLARAK KAPSAM DIŞIDIR: o, koyu zeminde
+      çalışacak biçimde çok daha yüksek alfa ile ayrıca üretildi ve açılış
+      kartı ile servis vitrini çerçevesinin derinliğini o taşır.
+    */
+    --shadow-e1: none;
+    --shadow-e2: none;
+
     background-color: var(--color-surface);
     color: var(--color-text-muted);
   }
@@ -376,6 +466,52 @@
     --color-surface: var(--rf-cinematic-950);
     --color-surface-raised: var(--rf-navy-900);
     background-color: var(--color-surface);
+  }
+
+  /*
+    MİKRO-ETKİLEŞİM: kaldırma (lift).
+
+    Tıklanabilir kartlarda hover/focus geri bildirimi. İki katman birlikte
+    çalışır — 2px yukarı KAYMA ve gölgenin e1'den e2'ye derinleşmesi.
+
+    Neden ayrı bir sınıf: aynı hareket üç ayrı bileşende (kategori kartı,
+    ürün kartı, bilgi kartı) tekrar edecekti. Tek yerde durunca hem ölçüsü
+    aynı kalır hem de aşağıdaki azaltılmış-hareket istisnası TEK kuralla
+    yazılabilir.
+
+    2px ölçülü bir değerdir: 1px hover'da fark edilmiyor, 4px kart ızgarasında
+    komşu kartla hizayı gözle bozuyor. `translateY` seçildi, `scale` değil —
+    ölçekleme kart içindeki metni bulanıklaştırır (alt piksel yeniden
+    örnekleme) ve ızgara hizasını bozar.
+
+    ODAK DA KAPSANIR (`:focus-within`): klavye kullanıcısı fare kullanıcısıyla
+    aynı geri bildirimi alır. Odak HALKASI ayrıca durur; bu onun yerine geçmez.
+
+    ---------------------------------------------------------------------------
+    BU SINIF YALNIZ HAREKETİ TAŞIR — gölge adımını TAŞIMAZ. Sebebi Tailwind v4:
+    ---------------------------------------------------------------------------
+    Katman sırası `components` → `utilities`'tir ve KATMAN, ÖZGÜLLÜĞÜ YENER.
+    Yani buraya yazılacak bir `box-shadow`, karttaki `shadow-(--shadow-e1)`
+    yardımcı sınıfına — o tek sınıflı, bu iki seçicili olsa bile — KAYBEDER.
+    İlk yazımda tam olarak bu oldu: kaldırma çalışıyor, gölge sabit kalıyordu
+    (tarayıcıda ölçülerek yakalandı).
+
+    Bu yüzden iş bölümü nettir:
+      .rf-lift            → geçiş + `transform` (rakipsiz, çalışır)
+      bileşenin yardımcı  → `shadow-(--shadow-e1) hover:shadow-(--shadow-e2)`
+                            sınıfları (aynı katmanda, doğru sırada çalışır)
+  */
+  .rf-lift {
+    transition:
+      transform var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+  }
+
+  .rf-lift:hover,
+  .rf-lift:focus-within {
+    transform: translateY(-2px);
   }
 }
 
@@ -413,6 +549,26 @@
     hidrasyondan sonra kare kare hesabı tümüyle bırakır.
   */
   [data-rf-scroll-motion] {
+    transform: none !important;
+  }
+
+  /*
+    MİKRO-ETKİLEŞİMLER (Faz 8 — `.rf-lift`).
+
+    Yukarıdaki genel kural yalnız SÜREYİ kısar; süresi sıfırlanan bir
+    `translateY` hâlâ uygulanır, sadece anında uygulanır. Kullanıcı hareket
+    istemediğini söylediğinde kaymanın kendisi de kalkmalıdır.
+
+    KALKAN: yer değiştirme. KALAN: gölge ve renk değişimi.
+    Bu bir taviz değil, kuralın doğru okunmasıdır — kapatılması istenen şey
+    HAREKETTİR, geri bildirim değil. Gölge/renk değişimi bir konum değişikliği
+    yaratmaz, vestibüler bir tetikleyici değildir ve öğenin tıklanabilir
+    olduğunu anlatan tek görsel ipucudur; onu da kaldırmak erişilebilirliği
+    iyileştirmez, kötüleştirir (WCAG 2.2 — 1.4.13 / 2.4.11 hover-focus
+    görünürlüğü).
+  */
+  .rf-lift:hover,
+  .rf-lift:focus-within {
     transform: none !important;
   }
 }

@@ -34,12 +34,19 @@ export function BrandsSection({ result }: { result: DataResult<BrandRow[]> }) {
         description="Markaya tıklayarak katalogda o markaya ait ürünleri görebilirsiniz."
       />
 
-      <ul className="mt-8 flex flex-wrap gap-3">
+      <ul className="mt-(--spacing-heading-gap) flex flex-wrap gap-3">
         {result.data.map((brand) => (
           <li key={brand.id}>
             <Link
               href={buildCatalogHref({ brandSlug: brand.slug })}
-              className="inline-flex min-h-11 items-center rounded-md border border-border-strong bg-surface px-4 py-2 text-body font-semibold text-text transition-colors duration-(--duration-fast) ease-(--ease-standard) hover:border-link hover:text-link"
+              /*
+                Marka çipi bir KONTROLDÜR (buton ailesi), kart değil:
+                `rounded-md` ve butonlarla aynı yükselti davranışı — duran
+                hâlde e1, hover/odakta e2. Yer değiştirmez; buton gerekçesiyle
+                aynı (bkz. `components/ui/Button.tsx`): çipler sarmalanan bir
+                sıra içindedir, biri kalkarsa satır hizası gözle bozulur.
+              */
+              className="inline-flex min-h-11 items-center rounded-md border border-border-strong bg-surface px-4 py-2 text-body font-semibold text-text shadow-(--shadow-e1) transition-[color,border-color,box-shadow] duration-(--duration-fast) ease-(--ease-standard) hover:border-link hover:text-link hover:shadow-(--shadow-e2)"
             >
               {brand.name}
             </Link>
@@ -47,7 +54,7 @@ export function BrandsSection({ result }: { result: DataResult<BrandRow[]> }) {
         ))}
       </ul>
 
-      <p className="mt-6 max-w-2xl text-caption text-text-muted">{BRANDS_DISCLAIMER}</p>
+      <p className="mt-8 max-w-2xl text-caption text-text-muted">{BRANDS_DISCLAIMER}</p>
     </Section>
   );
 }
