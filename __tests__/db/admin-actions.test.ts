@@ -126,10 +126,9 @@ beforeAll(async () => {
     [PLAIN_EMAIL, PLAIN_PASSWORD],
   );
 
-  const { rows } = await pg.query<{ id: string }>(
-    "select id from auth.users where email = $1",
-    [PLAIN_EMAIL],
-  );
+  const { rows } = await pg.query<{ id: string }>("select id from auth.users where email = $1", [
+    PLAIN_EMAIL,
+  ]);
   // Her kullanım açıkça dönüştürülür; aksi hâlde Postgres $1 için hem uuid hem
   // text çıkarsamaya çalışır ve "inconsistent types deduced" hatası verir.
   await pg.query(
@@ -289,10 +288,9 @@ describe("ürün yaşam döngüsü (yönetici oturumu)", () => {
       price_minor: string;
       compare_at_price_minor: string;
       availability: string;
-    }>(
-      "select price_minor, compare_at_price_minor, availability from products where id = $1",
-      [productId],
-    );
+    }>("select price_minor, compare_at_price_minor, availability from products where id = $1", [
+      productId,
+    ]);
     expect(Number(product.rows[0].price_minor)).toBe(124_990);
     expect(Number(product.rows[0].compare_at_price_minor)).toBe(149_900);
     expect(product.rows[0].availability).toBe("limited");
@@ -420,9 +418,8 @@ describe("ürün yaşam döngüsü (yönetici oturumu)", () => {
   });
 
   it("kopyalayarak çoğaltır — kopya taslak ve SKU'suz", async () => {
-    const { saveProductAction, duplicateProductAction } = await import(
-      "@/lib/admin/product-actions"
-    );
+    const { saveProductAction, duplicateProductAction } =
+      await import("@/lib/admin/product-actions");
 
     // Kopyalanacak, SKU'lu ve yayında bir kaynak ürün.
     const sourcePath = await expectRedirect(() =>
@@ -585,9 +582,7 @@ describe("görsel yükleme", () => {
     for (const row of rows) {
       expect(row.storage_path).not.toContain("passwd");
       expect(row.storage_path).not.toContain("..");
-      expect(row.storage_path).toMatch(
-        new RegExp(`^products/${productId}/[0-9a-f-]{36}\\.png$`),
-      );
+      expect(row.storage_path).toMatch(new RegExp(`^products/${productId}/[0-9a-f-]{36}\\.png$`));
     }
   });
 
@@ -653,10 +648,7 @@ describe("görsel yükleme", () => {
     );
     expect(result.status).toBe("success");
 
-    const remaining = await pg.query(
-      "select id from product_images where id = $1",
-      [target.id],
-    );
+    const remaining = await pg.query("select id from product_images where id = $1", [target.id]);
     expect(remaining.rowCount).toBe(0);
 
     const response = await fetch(
@@ -758,6 +750,141 @@ describe("site ayarları", () => {
 });
 
 // ===========================================================================
+// 3b. ANA SAYFA BÖLÜMLERİ — panel → veritabanı → herkese açık okuma
+// ===========================================================================
+
+describe("ana sayfa bölümleri", () => {
+  /*
+    Anahtar tohumlanmış satırlardan biri DEĞİLDİR: ilk kaydedişte `upsert` ile
+    oluşur. Bu yüzden dosyanın genel `afterAll`'ı (mevcut satırların değerini
+    geri yazar) onu temizlemez; burada kendi temizliğimizi yaparız.
+  */
+  afterAll(async () => {
+    await pg.query("delete from site_settings where key = 'homepage_sections'");
+  });
+
+  function sectionsForm(entries: Record<string, string>): FormData {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(entries)) form.set(key, value);
+    return form;
+  }
+
+  it("kapatılan bölüm yapılandırmaya yazılır ve herkese açık okumada gizlenir", async () => {
+    const { saveHomeSectionsAction } = await import("@/lib/admin/home-sections-actions");
+    const { parseHomeSectionsConfig, visibleHomeSections, HOMEPAGE_SECTION_META } =
+      await import("@/lib/home/section-registry");
+
+    // "uyumluluk" hariç her yönetilebilir bölüm açık gönderilir.
+    const form = sectionsForm(
+      Object.fromEntries(
+        HOMEPAGE_SECTION_META.filter(
+          (section) => section.id !== "uyumluluk" && !["giris", "iletisim"].includes(section.id),
+        ).map((section) => [`enabled:${section.id}`, "on"]),
+      ),
+    );
+
+    const result = await saveHomeSectionsAction(
+      { status: "idle", message: null, fieldErrors: {} },
+      form,
+    );
+    expect(result.status).toBe("success");
+
+    const { rows } = await pg.query<{ value: string }>(
+      "select value from site_settings where key = 'homepage_sections'",
+    );
+    const stored = parseHomeSectionsConfig(rows[0].value);
+    expect(stored.uyumluluk.enabled).toBe(false);
+
+    const visible = visibleHomeSections(HOMEPAGE_SECTION_META, stored).map((s) => s.id);
+    expect(visible).not.toContain("uyumluluk");
+    expect(visible).toContain("hakkinda");
+  });
+
+  it("taslak bölüm 'yayında' yapılınca görünür, geri alınınca kaybolur", async () => {
+    const { saveHomeSectionsAction } = await import("@/lib/admin/home-sections-actions");
+    const { parseHomeSectionsConfig, visibleHomeSections, HOMEPAGE_SECTION_META } =
+      await import("@/lib/home/section-registry");
+
+    const read = async () => {
+      const { rows } = await pg.query<{ value: string }>(
+        "select value from site_settings where key = 'homepage_sections'",
+      );
+      return parseHomeSectionsConfig(rows[0].value);
+    };
+
+    const published = await saveHomeSectionsAction(
+      { status: "idle", message: null, fieldErrors: {} },
+      sectionsForm({ "enabled:surec": "on", "status:surec": "live" }),
+    );
+    expect(published.status).toBe("success");
+    expect(visibleHomeSections(HOMEPAGE_SECTION_META, await read()).map((s) => s.id)).toContain(
+      "surec",
+    );
+
+    const backToDraft = await saveHomeSectionsAction(
+      { status: "idle", message: null, fieldErrors: {} },
+      sectionsForm({ "enabled:surec": "on", "status:surec": "draft" }),
+    );
+    expect(backToDraft.status).toBe("success");
+    expect(visibleHomeSections(HOMEPAGE_SECTION_META, await read()).map((s) => s.id)).not.toContain(
+      "surec",
+    );
+  });
+
+  it("zorunlu bölüm kapatılamaz (form onu kapatmayı denese bile)", async () => {
+    const { saveHomeSectionsAction } = await import("@/lib/admin/home-sections-actions");
+    const { parseHomeSectionsConfig, visibleHomeSections, HOMEPAGE_SECTION_META } =
+      await import("@/lib/home/section-registry");
+
+    /*
+      Boş form = hiçbir onay kutusu işaretli değil. Arayüz zorunlu bölümleri
+      `disabled` gösterir ama istek arayüzden geçmeden de gönderilebilir; asıl
+      kural sunucudadır.
+    */
+    const result = await saveHomeSectionsAction(
+      { status: "idle", message: null, fieldErrors: {} },
+      new FormData(),
+    );
+    expect(result.status).toBe("success");
+
+    const { rows } = await pg.query<{ value: string }>(
+      "select value from site_settings where key = 'homepage_sections'",
+    );
+    const stored = parseHomeSectionsConfig(rows[0].value);
+
+    // Zorunlu kimlikler yapılandırmaya HİÇ yazılmaz.
+    expect(stored.giris).toBeUndefined();
+    expect(stored.iletisim).toBeUndefined();
+
+    const visible = visibleHomeSections(HOMEPAGE_SECTION_META, stored).map((s) => s.id);
+    expect(visible).toEqual(["giris", "iletisim"]);
+  });
+
+  it("geçersiz onay durumu reddedilir", async () => {
+    const { saveHomeSectionsAction } = await import("@/lib/admin/home-sections-actions");
+
+    const result = await saveHomeSectionsAction(
+      { status: "idle", message: null, fieldErrors: {} },
+      sectionsForm({ "enabled:surec": "on", "status:surec": "yayinda" }),
+    );
+
+    expect(result.status).toBe("error");
+  });
+
+  it("yapılandırma anonim istemciye okunabilir (ana sayfa onu okur)", async () => {
+    const anon = createClient(SUPABASE_URL, ANON_KEY);
+    const { data, error } = await anon
+      .from("site_settings")
+      .select("value")
+      .eq("key", "homepage_sections")
+      .maybeSingle();
+
+    expect(error).toBeNull();
+    expect(data?.value).toBeTruthy();
+  });
+});
+
+// ===========================================================================
 // 4. YETKİLENDİRME — yönetici olmayan kimliği doğrulanmış kullanıcı
 // ===========================================================================
 
@@ -826,10 +953,7 @@ describe("yönetici olmayan kimliği doğrulanmış kullanıcı", () => {
     form.set("displayOrder", "0");
     form.set("status", "draft");
 
-    const result = await saveBrandAction(
-      { status: "idle", message: null, fieldErrors: {} },
-      form,
-    );
+    const result = await saveBrandAction({ status: "idle", message: null, fieldErrors: {} }, form);
     expect(result.status).toBe("error");
   });
 
@@ -862,6 +986,24 @@ describe("yönetici olmayan kimliği doğrulanmış kullanıcı", () => {
       "select value from site_settings where key = 'whatsapp_phone'",
     );
     expect(rows[0].value).not.toBe("+905329998877");
+  });
+
+  it("ana sayfa bölümlerini değiştiremez", async () => {
+    const { saveHomeSectionsAction } = await import("@/lib/admin/home-sections-actions");
+
+    const form = new FormData();
+    form.set("enabled:uyumluluk", "on");
+
+    const result = await saveHomeSectionsAction(
+      { status: "idle", message: null, fieldErrors: {} },
+      form,
+    );
+    expect(result.status).toBe("error");
+
+    const { rows } = await pg.query<{ count: string }>(
+      "select count(*)::text as count from site_settings where key = 'homepage_sections'",
+    );
+    expect(rows[0].count).toBe("0");
   });
 
   it("görsel yükleyemez", async () => {

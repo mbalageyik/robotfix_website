@@ -11,6 +11,7 @@ import {
   SERVICE_PROCESS,
   VALUE_PROPOSITION,
 } from "@/lib/home/content";
+import { HOMEPAGE_SECTION_META } from "@/lib/home/section-registry";
 
 /*
   ANA SAYFA İÇERİK BEKÇİLERİ.
@@ -293,15 +294,13 @@ describe("metin kaynağının bütünlüğü", () => {
   });
 });
 
-describe("bölüm kaydı (HOMEPAGE_SECTIONS)", () => {
+describe("bölüm kaydı (HOMEPAGE_SECTION_META)", () => {
   /*
-    Kayıt dosyası JSX içerir ve bölüm bileşenlerini (dolayısıyla next/image,
-    next/link, sunucu bileşenlerini) çeker; node ortamında içe aktarmak
-    testin konusu olmayan bir yükleme zinciri kurardı. Bu yüzden sıra
-    KAYNAK METİNDEN doğrulanır — kontrol edilen şey zaten metnin kendisidir.
+    Kayıt artık JSX'ten AYRI bir modüldedir (`lib/home/section-registry.ts`),
+    bu yüzden doğrudan içe aktarılabilir — render eşlemesi
+    (`components/home/sections.tsx`) hâlâ bölüm bileşenlerini çeker ve node
+    ortamında içe aktarılmaz; oradaki kontrol kaynak metin üzerinden yapılır.
   */
-  const registry = readFileSync(join(root, "components/home/sections.tsx"), "utf8");
-
   /** Bilgi dosyası §13 akışına karşılık gelen sıra. */
   const EXPECTED_ORDER = [
     "giris",
@@ -318,7 +317,7 @@ describe("bölüm kaydı (HOMEPAGE_SECTIONS)", () => {
     "iletisim",
   ];
 
-  const declaredIds = [...registry.matchAll(/^\s{4}id: "([a-z-]+)",$/gm)].map((match) => match[1]);
+  const declaredIds = HOMEPAGE_SECTION_META.map((section) => section.id);
 
   it("bölümler §13 akışındaki sırayla kayıtlıdır", () => {
     expect(declaredIds).toEqual(EXPECTED_ORDER);
@@ -330,14 +329,24 @@ describe("bölüm kaydı (HOMEPAGE_SECTIONS)", () => {
 
   it("onay bekleyen bölümler taslak olarak işaretlidir", () => {
     // Servis süreci ve SSS metinleri işletme onayı bekler.
-    const draftCount = [...registry.matchAll(/contentStatus: "draft"/g)].length;
-    expect(draftCount).toBe(2);
+    const drafts = HOMEPAGE_SECTION_META.filter((section) => section.contentStatus === "draft");
+    expect(drafts.map((section) => section.id)).toEqual(["surec", "sss"]);
   });
 
-  it("her bölümün sayfada bir karşılığı vardır", () => {
+  it("her kayıtlı bölümün bir render karşılığı vardır", () => {
+    const renderers = readFileSync(join(root, "components/home/sections.tsx"), "utf8");
+    for (const id of declaredIds) {
+      expect(renderers, `${id} için render eşlemesi yok`).toMatch(
+        new RegExp(`^\\s{2}${id}: `, "m"),
+      );
+    }
+  });
+
+  it("sayfa kaydı dolaşır ve panel yapılandırmasıyla birleştirir", () => {
     const page = readFileSync(join(root, "app/page.tsx"), "utf8");
-    // Sayfa kaydı gerçekten dolaşır; bölümleri elle sıralamaz.
-    expect(page).toContain("HOMEPAGE_SECTIONS.filter");
+    // Sayfa bölümleri elle sıralamaz; birleştirme tek fonksiyondan geçer.
+    expect(page).toContain("visibleHomeSections(HOMEPAGE_SECTIONS, sectionsConfig)");
+    expect(page).toContain("getHomeSectionsConfig()");
   });
 });
 

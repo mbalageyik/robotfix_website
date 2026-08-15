@@ -2,18 +2,30 @@ import type { Metadata } from "next";
 import { Fragment } from "react";
 import { HOMEPAGE_SECTIONS, type HomeData } from "@/components/home/sections";
 import { listFeaturedProducts } from "@/lib/data/products";
+import { getHomeSectionsConfig } from "@/lib/data/site-settings";
 import { listBrands, listCategories, listServices } from "@/lib/data/taxonomy";
 import { buildOrganizationJsonLd } from "@/lib/home/organization-jsonld";
+import { visibleHomeSections } from "@/lib/home/section-registry";
 import { getSiteConfig, siteUrl } from "@/lib/site-config";
 
 /*
   ANA SAYFA (bilgi dosyası §13).
 
-  YAPI: sayfa hiçbir bölümü kendi JSX'inde tarif etmez. Bölümlerin sırası,
-  açıklığı ve içerik onay durumu `components/home/sections.tsx` içindeki
-  `HOMEPAGE_SECTIONS` kaydındadır; burası yalnız veriyi toplar ve kaydı
-  dolaşır. Panel entegrasyonu (§17 "ana sayfa bölümleri") geldiğinde
-  değişecek tek yer o kayıttır.
+  YAPI: sayfa hiçbir bölümü kendi JSX'inde tarif etmez. Bölümlerin sırası ve
+  varsayılan durumu `lib/home/section-registry.ts` kaydında, render eşlemesi
+  `components/home/sections.tsx` içindedir; burası yalnız veriyi toplar ve
+  kaydı dolaşır.
+
+  PANEL KONTROLÜ (§17 "ana sayfa bölümleri"): açıklık ve onay durumu artık
+  `site_settings` içindeki tek bir JSON anahtarından okunur ve kod
+  varsayılanlarının ÜZERİNE yazılır (`visibleHomeSections`). Anahtar boşsa
+  kayıttaki varsayılanlar geçerlidir. Karar SUNUCUDA verilir: kapatılan bölüm
+  hiç render edilmez, istemciye gizlenecek bir işaret gönderilmez.
+
+  ONAY BEKLEYEN İÇERİK: `contentStatus: "draft"` olan bölüm (servis süreci,
+  SSS) yönetici panelden "Yayında" yapmadıkça herkese açık sayfada
+  GÖSTERİLMEZ. Bu, bilgi dosyası §20'nin gereğidir — işletme onayından
+  geçmemiş metin yayımlanmaz.
 
   GÖRÜNÜRLÜK: bu sayfadaki hiçbir sorgu `status` filtresi YAZMAZ — kural
   `lib/data/products.ts` başındaki gerekçeyle aynıdır, taslak/pasif satırları
@@ -64,12 +76,13 @@ export default async function Home() {
     kendi boş/hata durumunu kendisi karşılar. Böylece bir sorgunun
     başarısızlığı ana sayfayı düşürmez.
   */
-  const [featured, categories, brands, services, siteConfig] = await Promise.all([
+  const [featured, categories, brands, services, siteConfig, sectionsConfig] = await Promise.all([
     listFeaturedProducts(8),
     listCategories(),
     listBrands(),
     listServices(),
     getSiteConfig(),
+    getHomeSectionsConfig(),
   ]);
 
   const data: HomeData = { featured, categories, brands, services, siteConfig };
@@ -96,7 +109,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
-      {HOMEPAGE_SECTIONS.filter((section) => section.enabled).map((section) => (
+      {visibleHomeSections(HOMEPAGE_SECTIONS, sectionsConfig).map((section) => (
         <Fragment key={section.id}>{section.render(data)}</Fragment>
       ))}
     </main>

@@ -26,6 +26,7 @@ const LINKS: readonly AdminLink[] = [
   { href: "/admin/kategoriler", label: "Kategoriler" },
   { href: "/admin/cihaz-modelleri", label: "Cihaz Modelleri" },
   { href: "/admin/hizmetler", label: "Hizmetler" },
+  { href: "/admin/ana-sayfa", label: "Ana Sayfa" },
   { href: "/admin/site-ayarlari", label: "Site Ayarları" },
 ];
 

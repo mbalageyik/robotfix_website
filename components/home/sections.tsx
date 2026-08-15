@@ -13,26 +13,27 @@ import { TrustSection } from "@/components/home/TrustSection";
 import { ValuePropositionSection } from "@/components/home/ValuePropositionSection";
 import type { DataResult } from "@/lib/data/result";
 import type { BrandRow, CategoryRow, ProductListItem, ServiceRow } from "@/lib/data/types";
+import {
+  HOMEPAGE_SECTION_META,
+  type HomeSectionId,
+  type HomeSectionMeta,
+} from "@/lib/home/section-registry";
 import type { ResolvedSiteConfig } from "@/lib/site-config";
 
 /*
-  ANA SAYFA BÖLÜM KAYDI.
+  ANA SAYFA BÖLÜMLERİNİN RENDER EŞLEMESİ.
 
-  NEDEN BİR KAYIT: bilgi dosyası §17, "ana sayfa bölümleri"ni yönetim
-  panelinden kontrol edilebilir alanlar arasında sayar. O entegrasyon BU
-  GÖREVİN KAPSAMINDA DEĞİLDİR; ama sıra ve açıklık bugünden TEK BİR YERDE
-  toplanır, sayfanın JSX'ine dağılmaz. Panel geldiğinde değişecek olan bu
-  dizinin KAYNAĞIDIR (koddan → veritabanından), tüketicisi değil.
+  Bölümlerin KİMLİĞİ, SIRASI ve varsayılan durumu artık burada değil,
+  `lib/home/section-registry.ts` içindedir — çünkü o veriyi yönetim paneli de
+  okur ve panelin bütün bölüm bileşenlerini içe aktarması gerekmemelidir.
 
-  Sayfa bu diziyi gerçekten dolaşır — sıra burada değişince sayfada da
+  Bu dosya yalnız "hangi kimlik hangi bileşeni çizer" sorusuna cevap verir.
+  Eşleme `Record<HomeSectionId, ...>` tipindedir: kayda bir bölüm eklenir de
+  render'ı yazılmazsa typecheck kırılır, tersi de geçerlidir.
+
+  Sayfa bu diziyi gerçekten dolaşır — sıra kayıtta değişince sayfada da
   değişir. Yorum satırında duran, kod tarafından kullanılmayan bir "plan"
   değildir.
-
-  `contentStatus`:
-    - "live"  : içerik ya veritabanından gelir ya da bilgi dosyasındaki
-                doğrulanmış konumlandırma metnidir.
-    - "draft" : işletme onayı bekleyen metin (servis süreci, SSS). Kod
-                içinde `TODO(business)` ile de işaretlidir.
 */
 
 export interface HomeData {
@@ -43,110 +44,33 @@ export interface HomeData {
   siteConfig: ResolvedSiteConfig;
 }
 
-export interface HomeSection {
-  /** DOM `id`'si ve çapa adı. Sayfa içi bağlantılarda kullanılır. */
-  id: string;
-  /** Panelde ve raporlarda görünecek insan-okunur ad. */
-  label: string;
-  /** İçerik onay durumu. */
-  contentStatus: "live" | "draft";
-  /**
-   * Bölüm yayında mı. Şimdilik koda sabittir; panel entegrasyonunda
-   * `site_settings`ten okunacak tek alan budur.
-   */
-  enabled: boolean;
+export interface HomeSection extends HomeSectionMeta {
   render: (data: HomeData) => ReactNode;
 }
 
 /*
-  Sıra bilgi dosyası §13'teki içerik akışını izler. §13'ün 10. maddesindeki
-  "doğrulanmış müşteri kanıtları" bölümü BİLİNÇLİ OLARAK YOKTUR: doğrulanmış
-  müşteri kanıtımız yok, uydurulamaz (§20). Yerinde yalnız işletmenin kendi
-  girdiği adres ve çalışma saati durur (`guven`).
+  Veri-bağımlı bölümler (seçki, kategoriler, markalar, hizmetler) kendi
+  boş/hata durumlarını KENDİLERİ karşılar. Panel kontrolü bunun ÜSTÜNE binen
+  ayrı bir katmandır: bölüm kapatılmışsa hiç çağrılmaz, açıksa bileşenin
+  bugünkü davranışı aynen sürer.
 */
-export const HOMEPAGE_SECTIONS: readonly HomeSection[] = [
-  {
-    id: "giris",
-    label: "Açılış — kaydırmaya bağlı kart",
-    contentStatus: "live",
-    enabled: true,
-    render: () => <Hero />,
-  },
-  {
-    id: "hakkinda",
-    label: "Değer önerisi",
-    contentStatus: "live",
-    enabled: true,
-    render: () => <ValuePropositionSection />,
-  },
-  {
-    id: "secki",
-    label: "Robot Fix Seçkisi",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <FeaturedProductsSection result={data.featured} />,
-  },
-  {
-    id: "kategoriler",
-    label: "Ürün kategorileri",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <CategoriesSection result={data.categories} />,
-  },
-  {
-    id: "markalar",
-    label: "Markalar",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <BrandsSection result={data.brands} />,
-  },
-  {
-    id: "hizmetler",
-    label: "Teknik servis hizmetleri",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <ServicesSection result={data.services} />,
-  },
-  {
-    id: "uyumluluk",
-    label: "Uyumluluk anlatımı",
-    contentStatus: "live",
-    enabled: true,
-    render: () => <CompatibilitySection />,
-  },
-  {
-    id: "surec",
-    label: "Servis süreci",
-    contentStatus: "draft",
-    enabled: true,
-    render: () => <ServiceProcessSection />,
-  },
-  {
-    id: "pazaryerleri",
-    label: "Pazaryeri satış kanalları",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <MarketplaceSection siteConfig={data.siteConfig} />,
-  },
-  {
-    id: "guven",
-    label: "Güven unsurları (adres, çalışma saatleri)",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <TrustSection siteConfig={data.siteConfig} />,
-  },
-  {
-    id: "sss",
-    label: "Sık sorulan sorular",
-    contentStatus: "draft",
-    enabled: true,
-    render: () => <FaqSection />,
-  },
-  {
-    id: "iletisim",
-    label: "İletişim, konum ve WhatsApp",
-    contentStatus: "live",
-    enabled: true,
-    render: (data) => <ContactSection siteConfig={data.siteConfig} />,
-  },
-];
+const SECTION_RENDERERS: Record<HomeSectionId, (data: HomeData) => ReactNode> = {
+  giris: () => <Hero />,
+  hakkinda: () => <ValuePropositionSection />,
+  secki: (data) => <FeaturedProductsSection result={data.featured} />,
+  kategoriler: (data) => <CategoriesSection result={data.categories} />,
+  markalar: (data) => <BrandsSection result={data.brands} />,
+  hizmetler: (data) => <ServicesSection result={data.services} />,
+  uyumluluk: () => <CompatibilitySection />,
+  surec: () => <ServiceProcessSection />,
+  pazaryerleri: (data) => <MarketplaceSection siteConfig={data.siteConfig} />,
+  guven: (data) => <TrustSection siteConfig={data.siteConfig} />,
+  sss: () => <FaqSection />,
+  iletisim: (data) => <ContactSection siteConfig={data.siteConfig} />,
+};
+
+/** Kayıt + render eşlemesi. Sıra kayıttan gelir. */
+export const HOMEPAGE_SECTIONS: readonly HomeSection[] = HOMEPAGE_SECTION_META.map((meta) => ({
+  ...meta,
+  render: SECTION_RENDERERS[meta.id],
+}));

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseMoneyToMinor } from "@/lib/admin/money";
+import { HOME_SECTION_CONTENT_STATUSES } from "@/lib/home/section-registry";
 
 /*
   SUNUCU TARAFI doğrulama şemaları.
@@ -86,14 +87,17 @@ export const httpsUrlSchema = z
  * Fiyat alanı — boş bırakılabilir, sıfır bırakılamaz.
  * Gerekçe ve ayrıştırma: lib/admin/money.ts
  */
-const priceField = z.string().nullish().transform((value, ctx) => {
-  const result = parseMoneyToMinor(value);
-  if (!result.ok) {
-    ctx.addIssue({ code: "custom", message: result.message });
-    return z.NEVER;
-  }
-  return result.minor;
-});
+const priceField = z
+  .string()
+  .nullish()
+  .transform((value, ctx) => {
+    const result = parseMoneyToMinor(value);
+    if (!result.ok) {
+      ctx.addIssue({ code: "custom", message: result.message });
+      return z.NEVER;
+    }
+    return result.minor;
+  });
 
 // --- Alt kayıtlar (formdan JSON olarak gelir) -----------------------------
 
@@ -111,10 +115,10 @@ export const marketplaceLinkSchema = z
     isActive: z.boolean(),
   })
   // Şemadaki `product_marketplace_links_other_needs_label` kısıtının aynası.
-  .refine(
-    (link) => link.marketplace !== "other" || link.customLabel !== null,
-    { message: '"Diğer" seçildiğinde görünen ad zorunludur.', path: ["customLabel"] },
-  );
+  .refine((link) => link.marketplace !== "other" || link.customLabel !== null, {
+    message: '"Diğer" seçildiğinde görünen ad zorunludur.',
+    path: ["customLabel"],
+  });
 
 export const productSubResourcesSchema = z.object({
   specs: z.array(specSchema).max(100, "En fazla 100 teknik özellik eklenebilir."),
@@ -145,9 +149,9 @@ export const productSchema = z
     compareAtPriceMinor: priceField,
     availability: availabilitySchema,
     /** `null` = orijinal/uyumlu bilgisi DOĞRULANMADI (bilgi dosyası §20). */
-    isOriginal: z.enum(["unknown", "original", "compatible"]).transform((value) =>
-      value === "unknown" ? null : value === "original",
-    ),
+    isOriginal: z
+      .enum(["unknown", "original", "compatible"])
+      .transform((value) => (value === "unknown" ? null : value === "original")),
     boxContents: emptyToNull(2000, "Kutu içeriği"),
     installationNotes: emptyToNull(4000, "Montaj notları"),
     isFeatured: z.boolean(),
@@ -162,13 +166,10 @@ export const productSchema = z
   })
   // Şemadaki `products_compare_at_requires_price` kısıtının aynası: yanıltıcı
   // indirim gösterimi engellenir (bilgi dosyası §6).
-  .refine(
-    (product) => product.compareAtPriceMinor === null || product.priceMinor !== null,
-    {
-      message: "Eski fiyat girmek için güncel fiyat da girilmelidir.",
-      path: ["compareAtPriceMinor"],
-    },
-  )
+  .refine((product) => product.compareAtPriceMinor === null || product.priceMinor !== null, {
+    message: "Eski fiyat girmek için güncel fiyat da girilmelidir.",
+    path: ["compareAtPriceMinor"],
+  })
   .refine(
     (product) =>
       product.compareAtPriceMinor === null ||
@@ -180,8 +181,7 @@ export const productSchema = z
     },
   )
   .refine((product) => product.slug === null || slugSchema.safeParse(product.slug).success, {
-    message:
-      "Slug yalnız küçük harf, rakam ve tire içerebilir; tireyle başlayamaz veya bitemez.",
+    message: "Slug yalnız küçük harf, rakam ve tire içerebilir; tireyle başlayamaz veya bitemez.",
     path: ["slug"],
   });
 
@@ -287,17 +287,36 @@ export const siteSettingsSchema = z.object({
 
 export type SiteSettingsInput = z.infer<typeof siteSettingsSchema>;
 
+// --- Ana sayfa bölümleri --------------------------------------------------
+
+/*
+  Bölüm listesi FORMDAN GELMEZ, koddaki kayıttan gelir; formdan gelen tek şey
+  her bölümün açık olup olmadığı ve onay durumudur. Bu yüzden şema kimlikleri
+  doğrulamaz — aksiyon, yalnız KAYITTA VAR OLAN ve zorunlu OLMAYAN kimlikleri
+  toplar, bilinmeyen bir kimlik hiç şemaya ulaşmaz.
+
+  Onay durumu değerleri kayıttan gelir; burada YENİDEN YAZILMAZ. Kayda yeni
+  bir durum eklenirse şema onu kendiliğinden kabul eder.
+*/
+export const homeSectionContentStatusSchema = z.enum(HOME_SECTION_CONTENT_STATUSES, {
+  message: "Geçersiz içerik durumu.",
+});
+
+export const homeSectionOverrideSchema = z.object({
+  enabled: z.boolean(),
+  contentStatus: homeSectionContentStatusSchema,
+});
+
+export const homeSectionsConfigSchema = z.record(z.string(), homeSectionOverrideSchema);
+
+export type HomeSectionsConfigInput = z.infer<typeof homeSectionsConfigSchema>;
+
 // --- Görsel yükleme -------------------------------------------------------
 
 /** 5 MB. Ürün görseli için fazlasıyla yeterli; panelden yanlışlıkla RAW yüklenmesini engeller. */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-export const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/avif",
-] as const;
+export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 
 export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
 

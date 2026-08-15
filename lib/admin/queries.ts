@@ -2,6 +2,11 @@ import "server-only";
 
 import { getServerClient } from "@/lib/supabase/server-client";
 import { fail, ok, type DataResult } from "@/lib/data/result";
+import {
+  HOMEPAGE_SECTIONS_SETTING_KEY,
+  parseHomeSectionsConfig,
+  type HomeSectionsConfig,
+} from "@/lib/home/section-registry";
 import type {
   AvailabilityStatus,
   BrandRow,
@@ -261,11 +266,7 @@ export async function listProductOptions(
 ): Promise<DataResult<{ id: string; name: string }[]>> {
   const supabase = await getServerClient();
 
-  let query = supabase
-    .from("products")
-    .select("id, name")
-    .neq("status", "archived")
-    .order("name");
+  let query = supabase.from("products").select("id, name").neq("status", "archived").order("name");
 
   if (excludeId) query = query.neq("id", excludeId);
 
@@ -280,6 +281,28 @@ export async function getAdminSiteSettings(): Promise<DataResult<Record<string, 
   if (error) return fail("query_failed", error.message, error.code);
 
   return ok(Object.fromEntries((data ?? []).map((row) => [row.key, row.value])));
+}
+
+/**
+ * Ana sayfa bölüm yapılandırması — panel görünümü.
+ *
+ * `lib/data/site-settings.ts` içindeki genel okuyucudan AYRIDIR: bu, hatayı
+ * YUTMAZ. Ziyaretçi için "okunamadı" ile "boş" aynı şeydir (ikisinde de
+ * varsayılanlar geçerlidir); ama yönetici, kaydettiği değerin okunamadığını
+ * BİLMELİDİR — aksi hâlde panel sessizce varsayılanları gösterir ve
+ * kaydedilmiş ayarların üzerine yazılır.
+ */
+export async function getAdminHomeSectionsConfig(): Promise<DataResult<HomeSectionsConfig>> {
+  const supabase = await getServerClient();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", HOMEPAGE_SECTIONS_SETTING_KEY)
+    .maybeSingle();
+
+  if (error) return fail("query_failed", error.message, error.code);
+
+  return ok(parseHomeSectionsConfig(data?.value ?? null));
 }
 
 // --- Panel özeti ----------------------------------------------------------
