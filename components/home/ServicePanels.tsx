@@ -60,8 +60,17 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
       className={cn(
         // Mobil: dikey akordeon (gerekçe ServicesSection'da).
         "mt-10 flex flex-col gap-2",
-        // Masaüstü: sabit yükseklikli yatay şerit.
-        "md:h-[32rem] md:flex-row md:gap-3",
+        /*
+          Masaüstü: sabit yükseklikli yatay şerit.
+
+          32rem → 36rem (Faz 7, +%12,5): teknik servis anlatımının sayfadaki
+          görsel ağırlığını artırmak için (§22 · 1). Ölçü keyfî değil —
+          32rem'de açık panelin açıklaması ve CTA'sı `mt-auto` ile alta
+          yaslandığında başlıkla arasında nefes kalmıyordu. 36rem, 900px'lik
+          bir dizüstü ekranında bölümü hâlâ tek bakışta bırakır; daha
+          yükseği başlığı ekran dışına iterdi.
+        */
+        "md:h-[36rem] md:flex-row md:gap-3",
       )}
     >
       {items.map((item) => {
@@ -84,7 +93,13 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
               "transition-[flex-grow] duration-(--duration-slow) ease-(--ease-emphasized)",
               // Mobilde büyüme YÜKSEKLİKTEN gelir; dokunma hedefi korunur.
               "min-h-14 md:min-h-0",
-              isActive ? "md:flex-[4]" : "md:flex-[1]",
+              /*
+                Açık panelin şeritteki payı 4/1'den 5/1'e çıkarıldı (Faz 7):
+                dört hizmette okunan panel şeridin %57'sinden %62,5'ine
+                genişler. Kapalı paneller dikey adlarını taşıyacak kadar
+                yerini korur — 6/1'de adlar sıkışmaya başlıyordu.
+              */
+              isActive ? "md:flex-[5]" : "md:flex-[1]",
             )}
           >
             {/* Dekoratif zemin: marka degradesi + büyük hizmet simgesi. */}

@@ -66,21 +66,50 @@ export const HERO_CONTENT = {
 
   `__tests__/home-content.test.ts` bunu otomatik kontrol eder.
 */
+/** Konumlandırmanın bir ayağı. `lead` işaretli olan arayüzde önde durur. */
+export interface ValuePillar {
+  title: string;
+  body: string;
+  /**
+   * Konumlandırmanın TAŞIYICI ayağı mı.
+   *
+   * §22'nin 1. maddesi ("yalnızca yedek parça mağazası olarak değil, ürün ve
+   * teknik servis uzmanlığını birleştiren marka olarak konumlandır") üç eşit
+   * sütunla anlatıldığında kayboluyordu: teknik servis, parça yönlendirmesi ve
+   * iletişimle aynı görsel ağırlıktaydı. İşaret, o ayağa arayüzde daha büyük
+   * bir başlık ve vurgu çizgisi verir.
+   *
+   * Bu bir DURUM GÖSTERGESİ DEĞİLDİR, hiyerarşidir: bilgi kaybı olmaz, ayrım
+   * yalnız renkle de anlatılmaz (başlık boyutu ve sıra da farklıdır).
+   */
+  lead?: boolean;
+}
+
 export const VALUE_PROPOSITION = {
   overline: "Uzmanlık alanımız",
-  title: "Ürün, parça ve teknik servis aynı uzmanlıkta",
+  /* §2'deki marka vaadinin sırası korunarak teknik servis öne alındı. */
+  title: "Teknik servis, parça ve ürün tek bir uzman noktada",
   /*
     §2'deki konumlandırmanın doğrudan karşılığı: "Robot Fix yalnızca yedek
     parça satan bir mağaza olarak konumlandırılmamalıdır."
+
+    Faz 7'de GÜÇLENDİRİLDİ, yeniden yazılmadı: özgün cümlelerin üçü de
+    yerinde durur; başa §2'nin "teknik servis uzmanlığı ... marka anlatısının
+    temel parçasıdır" vurgusu eklendi. Yeni bir iddia (süre, adet, oran,
+    yetki) EKLENMEDİ.
   */
   body:
-    "Robot Fix yalnızca yedek parça satan bir mağaza değildir. Cihazı inceleyen, " +
-    "arızayı tespit eden ve onaran ekiple parçayı öneren ekip aynıdır. Bu yüzden " +
-    "“hangi parça uyar” sorusu satıştan önce cevaplanır.",
+    "Robot Fix yalnızca yedek parça satan bir mağaza değildir; çekirdeğinde teknik " +
+    "servis vardır. Arıza tespiti, bakım ve onarım aynı çatı altında yürür — cihazı " +
+    "inceleyen, arızayı tespit eden ve onaran ekiple parçayı öneren ekip aynıdır. Bu " +
+    "yüzden “hangi parça uyar” sorusu satıştan önce cevaplanır.",
   pillars: [
     {
       title: "Teknik servis",
-      body: "Arıza tespiti, bakım ve onarım. Cihazın durumu görülmeden işlem yapılmaz.",
+      body:
+        "Arıza tespiti, bakım ve onarım. Cihazın durumu görülmeden işlem yapılmaz; " +
+        "parça önerisi de bu incelemenin sonucudur.",
+      lead: true,
     },
     {
       title: "Doğru parça yönlendirmesi",
@@ -94,7 +123,51 @@ export const VALUE_PROPOSITION = {
         "WhatsApp üzerinden doğrudan yazışma. Ne yapılacağı ve ücreti konuşulmadan " +
         "işleme başlanmaz.",
     },
-  ],
+  ] as readonly ValuePillar[],
+} as const;
+
+// ---------------------------------------------------------------------------
+// Servis vitrini (bilgi dosyası §2, §14, §22 · 1)
+// ---------------------------------------------------------------------------
+/*
+  Bu bölüm bir SÜREÇ ANLATIMI DEĞİLDİR — `SERVICE_PROCESS` (dört adım, işletme
+  onayı bekliyor) ile karıştırılmamalıdır. Burada anlatılan şey konumlandırma:
+  teknik servisin markanın çekirdeği olduğu (§2, §22 · 1). Bu yüzden onay
+  bekleyen operasyonel hiçbir ayrıntı (süre, ücret, kargo, adrese teslim)
+  geçmez ve bölüm `contentStatus: "live"` olarak kayıtlıdır.
+
+  GÖRÜNTÜ YER TUTUCUDUR. Projede gerçek Robot Fix atölye çekimi yoktur; yerine
+  ticari kullanıma açık, atıf gerektirmeyen bir stok görüntü YERELE indirildi
+  (kaynak ve lisans: `docs/varlik-lisanslari.md`). Görüntü bir mekânı ya da
+  ekibi TEMSİL ETMEZ; teknik işin yakın planıdır ve alt metninde yer tutucu
+  olduğu açıkça yazar — hero görselinde kurulan sözleşmenin aynısı.
+*/
+export const SERVICE_SHOWCASE = {
+  /* Üst etikette marka adı YOKTUR — Türkçe büyütme tuzağı, yukarıdaki nota bakınız. */
+  overline: "Teknik servis uzmanlığı",
+  title: "Uzman ellerde teknik servis",
+  body:
+    "Robot süpürge; motoru, fırça sistemi, sensörleri ve şarj elektroniği birlikte " +
+    "çalışan bir cihazdır. Robot Fix bu cihaza parça dizilen bir raf olarak değil, " +
+    "açılıp incelenen bir bütün olarak bakar: bakım, onarım ve parça aynı uzmanlık " +
+    "altında yürür.",
+  media: {
+    /*
+      YEREL DOSYA — dış CDN'e bağlanılmaz. Hotlink her sayfa açılışını üçüncü
+      bir sunucunun ayakta olmasına bağlardı.
+      TODO: gerçek Robot Fix atölye/servis videosu ile değiştirilecek.
+    */
+    videoSrc: "/videos/servis-vitrini.mp4",
+    poster: {
+      src: "/gorseller/servis-vitrini-poster.jpg",
+      /* Alt metin görüntünün YER TUTUCU olduğunu da söyler — gerçekmiş gibi sunulmaz. */
+      alt:
+        "[ÖRNEK] Bir cihazın metal alt kapağındaki vidaların tornavidayla sökülüşünü " +
+        "gösteren yakın plan — gerçek Robot Fix atölye çekimi yerine kullanılan geçici görüntü",
+      width: 1280,
+      height: 720,
+    },
+  },
 } as const;
 
 // ---------------------------------------------------------------------------

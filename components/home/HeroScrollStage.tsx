@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { REDUCED_MOTION_QUERY, useMediaQuery } from "@/lib/hooks/use-media-query";
 
 /*
   AÇILIŞ SAHNESİ — kaydırmaya bağlı kart (Faz 6).
@@ -41,45 +42,19 @@ export interface HeroScrollStageProps {
  */
 const START_ROTATION_DEG = 16;
 
-/** Kartın küçük ekrana geçtiği sınır — Tailwind `md` ile aynı nokta. */
-const COMPACT_QUERY = "(max-width: 768px)";
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
 /*
-  Bir medya sorgusunu HİDRASYON GÜVENLİ biçimde okur.
+  Kartın küçük ekrana geçtiği sınır — Tailwind `md` ile aynı nokta.
 
-  NEDEN `useState` + `useEffect` DEĞİL:
-  Sunucu medya sorgusunu bilemez. Değeri bir efektle sonradan yazmak iki
-  sorun doğurur — React 19'un `set-state-in-effect` kuralı bunu reddeder ve
-  ilk istemci render'ı sunucununkiyle çelişirse React öznitelik uyuşmazlığını
-  YAMALAMAZ (sessizce yanlış stille kalır).
+  Sorgu `max-width` yönündedir ve bu BURADA doğrudur: `useMediaQuery`nin
+  sunucu anlık görüntüsü `false` olduğu için sunucu "masaüstü, hareket açık"
+  varsayar — hero için istenen varsayım budur. (Servis vitrini videoyu
+  koşullu yüklediği için sorguyu tersine, `min-width` yönünde sorar;
+  gerekçe `lib/hooks/use-media-query.ts` içinde.)
 
-  `useSyncExternalStore` tam bu iş için vardır: `getServerSnapshot`
-  hidrasyon boyunca kullanılır (sunucuyla birebir aynı çıktı), hidrasyondan
-  sonra gerçek değere geçilir ve sorgu değiştikçe abonelik yeniden render
-  ettirir.
-
-  Sunucu anlık görüntüsü BİLİNÇLİ olarak `false`'tur: "hareket açık,
-  masaüstü" varsayımı. Azaltılmış hareket tercihi olan kullanıcı bu tek
-  kareyi GÖRMEZ, çünkü CSS katmanı (aşağıdaki nota bakınız) dönüşümü ilk
-  boyamadan itibaren zaten sıfırlar.
+  Azaltılmış hareket tercihi olan kullanıcı bu tek kareyi GÖRMEZ, çünkü CSS
+  katmanı (aşağıdaki nota bakınız) dönüşümü ilk boyamadan itibaren sıfırlar.
 */
-function useMediaQuery(query: string): boolean {
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => {
-      const mediaQuery = window.matchMedia(query);
-      mediaQuery.addEventListener("change", onStoreChange);
-      return () => mediaQuery.removeEventListener("change", onStoreChange);
-    },
-    [query],
-  );
-
-  return useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia(query).matches,
-    () => false,
-  );
-}
+const COMPACT_QUERY = "(max-width: 768px)";
 
 export function HeroScrollStage({ header, children }: HeroScrollStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);

@@ -9,9 +9,11 @@ import {
   FAQ_ITEMS,
   MARKETPLACE_CONTENT,
   SERVICE_PROCESS,
+  SERVICE_SHOWCASE,
   VALUE_PROPOSITION,
 } from "@/lib/home/content";
 import { HOMEPAGE_SECTION_META } from "@/lib/home/section-registry";
+import { REDUCED_MOTION_QUERY } from "@/lib/hooks/use-media-query";
 
 /*
   ANA SAYFA İÇERİK BEKÇİLERİ.
@@ -309,6 +311,8 @@ describe("bölüm kaydı (HOMEPAGE_SECTION_META)", () => {
     "kategoriler",
     "markalar",
     "hizmetler",
+    // §13'ün akışına eklenen bölüm; gerekçesi kayıt dosyasındaki notta.
+    "servis-vitrini",
     "uyumluluk",
     "surec",
     "pazaryerleri",
@@ -336,8 +340,10 @@ describe("bölüm kaydı (HOMEPAGE_SECTION_META)", () => {
   it("her kayıtlı bölümün bir render karşılığı vardır", () => {
     const renderers = readFileSync(join(root, "components/home/sections.tsx"), "utf8");
     for (const id of declaredIds) {
+      // Tire içeren kimlikler nesne anahtarı olarak TIRNAKLA yazılır
+      // (`"servis-vitrini":`); desen iki biçimi de kabul eder.
       expect(renderers, `${id} için render eşlemesi yok`).toMatch(
-        new RegExp(`^\\s{2}${id}: `, "m"),
+        new RegExp(`^\\s{2}"?${id}"?: `, "m"),
       );
     }
   });
@@ -506,10 +512,16 @@ describe("açılış bölümü (hero)", () => {
   });
 
   it("hareket hesabı hidrasyondan sonra tümüyle bırakılır", () => {
+    /*
+      Faz 7: sorgu metni `lib/hooks/use-media-query.ts` içindeki paylaşılan
+      sabite taşındı (servis vitrini de aynı okumayı yapıyor). Korunan şey
+      yer değil DAVRANIŞ: tercih okunuyor ve kare kare hesabı bırakılıyor.
+    */
     const code = stripComments(stage);
 
-    expect(code).toContain("(prefers-reduced-motion: reduce)");
+    expect(code).toContain("REDUCED_MOTION_QUERY");
     expect(code).toMatch(/prefersReducedMotion\s*\?/);
+    expect(REDUCED_MOTION_QUERY).toBe("(prefers-reduced-motion: reduce)");
   });
 
   it("medya sorgusu hidrasyon güvenli okunur", () => {
@@ -519,12 +531,17 @@ describe("açılış bölümü (hero)", () => {
       uyuşmazlığını YAMALAMAZ — kart sessizce yanlış stille kalırdı.
       `useSyncExternalStore` bu iş için vardır: `getServerSnapshot` hidrasyon
       boyunca kullanılır, sonra gerçek değere geçilir.
-    */
-    const code = stripComments(stage);
 
-    expect(code).toContain("useSyncExternalStore");
+      Okuma Faz 7'de paylaşılan hook'a taşındı; bekçi de oraya bakar — iki
+      sahne de aynı güvenceyi oradan alır.
+    */
+    const hook = stripComments(readFileSync(join(root, "lib/hooks/use-media-query.ts"), "utf8"));
+
+    expect(hook).toContain("useSyncExternalStore");
+    expect(hook).toMatch(/\(\)\s*=>\s*false,/); // getServerSnapshot
     // Tercih efektle state'e yazılmamalı (React 19 `set-state-in-effect`).
-    expect(code).not.toMatch(/useEffect\([^)]*setMounted/);
+    expect(hook).not.toContain("useEffect");
+    expect(stripComments(stage)).toContain("useMediaQuery");
   });
 
   it("3D, canvas veya video kütüphanesi getirmez", () => {
@@ -552,5 +569,168 @@ describe("açılış bölümü (hero)", () => {
     expect(HERO_CONTENT.image.src.startsWith("/")).toBe(true);
     expect(existsSync(join(root, "public", HERO_CONTENT.image.src))).toBe(true);
     expect(hero).not.toMatch(/unsplash|pexels|https?:\/\//i);
+  });
+});
+
+describe("servis vitrini", () => {
+  /*
+    Faz 7: teknik servis konumlandırmasını (§2, §22 · 1) taşıyan, kaydırmaya
+    duyarlı video bölümü.
+
+    Testin koruduğu şey görsel sunum DEĞİL, üç sözleşmedir:
+      1. Anlatı DOM metnindedir; video ve poster yalnız dekordur (§14).
+      2. Video KOŞULLU yüklenir — dar ekran, azaltılmış hareket ve veri
+         tasarrufu tercihlerinde hiç indirilmez; poster her durumda durur.
+      3. Görüntü YEREL ve YER TUTUCUDUR; hotlink yoktur, gerçekmiş gibi
+         sunulmaz.
+  */
+  const section = readFileSync(join(root, "components/home/ServiceShowcaseSection.tsx"), "utf8");
+  const stage = readFileSync(join(root, "components/home/ServiceShowcaseStage.tsx"), "utf8");
+  const stageCode = stripComments(stage);
+
+  it("metin tek kaynaktan gelir, bileşene kopyalanmaz", () => {
+    expect(section).toContain("SERVICE_SHOWCASE");
+    expect(section).not.toContain("Robot süpürge; motoru");
+  });
+
+  it("metin ve CTA istemci bileşenine TAŞINMAZ (§14: JS'siz okunur kalır)", () => {
+    expect(section).not.toContain('"use client"');
+    expect(section).toContain("WhatsAppButton");
+
+    expect(stage).toContain('"use client"');
+    expect(stageCode).not.toContain("SERVICE_SHOWCASE");
+    expect(stageCode).not.toContain("WhatsAppButton");
+  });
+
+  it("servis süreci metnini tekrar etmez — ayrı bir içerik parçasıdır", () => {
+    const showcase = `${SERVICE_SHOWCASE.title} ${SERVICE_SHOWCASE.body}`;
+    for (const step of SERVICE_PROCESS.steps) {
+      expect(showcase, `"${step.title}" süreç adımı vitrinde tekrar edilmemeli`).not.toContain(
+        step.title,
+      );
+      expect(showcase).not.toContain(step.body);
+    }
+  });
+
+  it("video ve poster YEREL varlıklardır — hotlink yok", () => {
+    const { videoSrc, poster } = SERVICE_SHOWCASE.media;
+
+    expect(videoSrc.startsWith("/")).toBe(true);
+    expect(poster.src.startsWith("/")).toBe(true);
+    expect(existsSync(join(root, "public", videoSrc))).toBe(true);
+    expect(existsSync(join(root, "public", poster.src))).toBe(true);
+
+    for (const file of [section, stage]) {
+      expect(file).not.toMatch(/unsplash|pexels|pixabay|cdn\./i);
+      expect(stripComments(file)).not.toMatch(/https?:\/\//i);
+    }
+  });
+
+  it("yer tutucu video bütçeyi aşmaz", () => {
+    /*
+      Bilgi dosyası §14: "Büyük 3D dosyalar ve görseller performans
+      hedeflerine göre optimize edilmelidir." Gerçek çekim geldiğinde bu
+      sınır bir hatırlatıcıdır: 4 MB'ı aşan bir arka plan videosu masaüstünde
+      bile pahalıdır.
+    */
+    const bytes = statSync(join(root, "public", SERVICE_SHOWCASE.media.videoSrc)).size;
+    expect(bytes).toBeLessThan(4 * 1024 * 1024);
+  });
+
+  it("görüntünün yer tutucu olduğu alt metninde açıkça yazar", () => {
+    expect(SERVICE_SHOWCASE.media.poster.alt).toContain("[ÖRNEK]");
+    expect(SERVICE_SHOWCASE.media.poster.alt.length).toBeGreaterThan(20);
+  });
+
+  it("video otomatik oynatma politikasına uyar ve dekoratiftir", () => {
+    // `muted` olmayan bir video tarayıcıda zaten oynamaz; `playsInline`
+    // iOS'ta tam ekrana atlamayı engeller.
+    for (const attribute of ["autoPlay", "muted", "loop", "playsInline", 'aria-hidden="true"']) {
+      expect(stageCode, `<video> ${attribute} taşımalı`).toContain(attribute);
+    }
+  });
+
+  it("videonun dört kapısı da yerindedir", () => {
+    expect(stageCode).toContain("(min-width: 768px)");
+    expect(stageCode).toContain("REDUCED_MOTION_QUERY");
+    expect(stageCode).toContain("useSaveData");
+    expect(stageCode).toContain("IntersectionObserver");
+    expect(stageCode).toMatch(
+      /showVideo\s*=\s*isWide && !prefersReducedMotion && !savesData && isNear/,
+    );
+  });
+
+  it("sorgu `min-width` yönündedir — sunucu HTML'inde <video> bulunmaz", () => {
+    /*
+      `useMediaQuery`nin sunucu anlık görüntüsü `false`'tur. Sorgu
+      `max-width` yazılsaydı sunucu "dar değil" varsayar ve videoyu HERKESE
+      gönderirdi; dar ekran onu hidrasyondan önce indirmeye başlardı.
+    */
+    expect(stageCode).not.toContain("max-width");
+  });
+
+  it("poster HER ZAMAN render edilir; video onun üstüne biner", () => {
+    // Poster koşulun İÇİNDE olsaydı, kapılardan biri kapandığında bölüm boş
+    // bir kutuya düşerdi.
+    expect(stageCode.indexOf("{poster}")).toBeGreaterThan(-1);
+    expect(stageCode.indexOf("{poster}")).toBeLessThan(stageCode.indexOf("showVideo &&"));
+  });
+
+  it("azaltılmış hareket tercihi JS OLMADAN da uygulanır", () => {
+    // Global CSS kuralının hedefi gerçekten hareket eden öğelere konmuş olmalı.
+    expect(stage.match(/data-rf-scroll-motion/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(stageCode).toMatch(/prefersReducedMotion\s*\?/);
+  });
+
+  it("hareket için yeni bir bağımlılık getirmez", () => {
+    expect(stageCode).toContain('from "framer-motion"');
+    for (const forbidden of ["gsap", "lenis", "three", "@react-three"]) {
+      expect(stageCode.toLowerCase()).not.toContain(forbidden);
+    }
+  });
+});
+
+describe("pazaryeri butonları", () => {
+  /*
+    §9: bağlantı yoksa buton HİÇ gösterilmez; resmî logolar "ilgili kullanım
+    kuralları gözetilerek" kullanılmalıdır. Bu yüzden kodda ne sabit mağaza
+    URL'i ne de marka logosu bulunur.
+  */
+  const marketplace = readFileSync(join(root, "components/home/MarketplaceSection.tsx"), "utf8");
+  const code = stripComments(marketplace);
+
+  it("mağaza bağlantıları yalnız site ayarlarından gelir", () => {
+    expect(code).toContain("siteConfig");
+    expect(code).toContain("storeLinks");
+    // Kodda sabit bir pazaryeri adresi yok.
+    expect(code).not.toMatch(/https?:\/\//i);
+  });
+
+  it("bağlantı yoksa buton hiç render edilmez", () => {
+    expect(code).toMatch(/storeLinks\.length > 0/);
+  });
+
+  it("resmî logo varlığı kullanılmaz", () => {
+    // Ne `next/image` ile bir logo, ne de satır içi bir marka SVG'si.
+    expect(code).not.toContain("next/image");
+    expect(code).not.toContain("<svg");
+    expect(code).not.toMatch(/logo/i);
+  });
+
+  it("pazaryerinin adı METİN olarak yazar — renk tek gösterge değildir", () => {
+    expect(code).toContain("{link.label}");
+    // Vurgu çizgisi ekran okuyucudan gizli, yani anlam taşımıyor.
+    expect(code).toMatch(/aria-hidden="true"[\s\S]{0,200}ACCENTS\[link\.marketplace\]/);
+  });
+
+  it("bilinmeyen pazaryeri için marka rengi uydurulmaz", () => {
+    expect(code).toMatch(/ACCENTS\[link\.marketplace\] \?\? "bg-link"/);
+  });
+
+  it("harici bağlantı güvenlik nitelikleriyle açılır", () => {
+    // `external`, ButtonLink içinde target=_blank + rel=noopener noreferrer verir.
+    expect(code).toContain("external");
+    const button = readFileSync(join(root, "components/ui/Button.tsx"), "utf8");
+    expect(button).toContain('rel: "noopener noreferrer"');
   });
 });

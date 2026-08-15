@@ -1,6 +1,7 @@
 import { ButtonLink } from "@/components/ui/Button";
 import { Section } from "@/components/layout/Section";
 import { SectionHeading } from "@/components/home/SectionHeading";
+import { cn } from "@/lib/cn";
 import { MARKETPLACE_CONTENT } from "@/lib/home/content";
 import type { ResolvedSiteConfig } from "@/lib/site-config";
 
@@ -18,7 +19,27 @@ import type { ResolvedSiteConfig } from "@/lib/site-config";
 
   §9 gereği fiyat/stok senkronizasyonu izlenimi verilmez — sorumluluk
   cümlesi bölümün ayrılmaz parçasıdır.
+
+  RESMÎ LOGO KULLANILMAZ (§9: "logolar ilgili kullanım kuralları gözetilerek
+  kullanılmalıdır"). Pazaryeri adı butonda METİN olarak yazar; yanındaki
+  dekoratif çizgi yalnız kanalları birbirinden ayırmaya yarar ve tanınmayan
+  bir kanalda hiç boyanmaz. Gerçek marka varlığı istenirse bu ayrı bir onay
+  ve varlık temini işidir.
 */
+
+/**
+ * Pazaryeri kimliği → dekoratif vurgu sınıfı.
+ *
+ * Kimlikler `lib/site-config.ts` içindeki `STORE_LINK_KEYS` ile aynıdır.
+ * Listede olmayan bir kimlik nötr bağlantı rengine düşer: uydurma bir marka
+ * rengi üretilmez. Renkler resmî marka renkleri değildir (gerekçe:
+ * `app/globals.css` içindeki pazaryeri tonları notu).
+ */
+const ACCENTS: Record<string, string> = {
+  amazon: "bg-marketplace-amazon",
+  hepsiburada: "bg-marketplace-hepsiburada",
+  trendyol: "bg-marketplace-trendyol",
+};
 
 export function MarketplaceSection({ siteConfig }: { siteConfig: ResolvedSiteConfig }) {
   const { storeLinks } = siteConfig;
@@ -38,8 +59,10 @@ export function MarketplaceSection({ siteConfig }: { siteConfig: ResolvedSiteCon
             <li key={link.marketplace}>
               {/*
                 Pazaryerinin adı buton metninde AÇIKÇA yazar (§9, §15): renk
-                veya logo tek gösterge olamaz. `external` yeni sekme + rel
-                güvenlik niteliklerini ve ekran okuyucu bilgisini getirir.
+                veya logo tek gösterge olamaz. Metin ayrıca bir EYLEM söyler
+                ("...git"), yalnız bir ad değildir. `external` yeni sekme +
+                `rel="noopener noreferrer"` ve "yeni sekmede açılır" bilgisini
+                getirir.
               */}
               <ButtonLink
                 href={link.url}
@@ -47,7 +70,14 @@ export function MarketplaceSection({ siteConfig }: { siteConfig: ResolvedSiteCon
                 external
                 data-event={`marketplace_store_${link.marketplace}_click`}
               >
-                {link.label} mağazamız
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "h-5 w-1 shrink-0 rounded-full",
+                    ACCENTS[link.marketplace] ?? "bg-link",
+                  )}
+                />
+                {link.label} mağazamıza git
               </ButtonLink>
             </li>
           ))}

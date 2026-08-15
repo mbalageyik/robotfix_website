@@ -94,6 +94,24 @@ export const HOMEPAGE_SECTION_META = [
     contentStatus: "live",
     enabled: true,
   },
+  /*
+    §13'ün akışına EKLENEN tek bölüm. Yeri seçimdir, boşluk doldurma değil:
+    hizmet listesinin (6) hemen ardından gelir ve o listenin arkasındaki
+    uzmanlık iddiasını taşır (§2, §22 · 1). Uyumluluk anlatımından (7) ÖNCEDİR,
+    çünkü uyumluluk artık bir ürün/katalog konusudur — araya girmesi servis
+    temasını böler.
+
+    `contentStatus: "live"`: metin işletme onayı bekleyen bir operasyonel
+    anlatım değil, §2'deki onaylı konumlandırmanın karşılığıdır. Görüntünün
+    yer tutucu olması ONAY DURUMU DEĞİLDİR; o, alt metninde ve kod yorumunda
+    işaretlidir.
+  */
+  {
+    id: "servis-vitrini",
+    label: "Servis vitrini — teknik servis anlatımı",
+    contentStatus: "live",
+    enabled: true,
+  },
   {
     id: "uyumluluk",
     label: "Uyumluluk anlatımı",

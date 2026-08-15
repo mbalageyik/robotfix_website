@@ -49,6 +49,26 @@
   */
   --rf-edge-on-dark: #7e8d99;
 
+  /*
+    --- Pazaryeri vurgu tonları — MARKA PALETİ DEĞİLDİR ---
+
+    Bilinçli olarak `--rf-` ÖNEKSİZ: bunlar Robot Fix paletinin parçası değil,
+    üçüncü taraf satış kanallarını ayırt eden yardımcı tonlardır. Yeni bir
+    marka rengi olarak ele alınmamalı, başka hiçbir yerde kullanılmamalıdır.
+
+    Bunlar ilgili pazaryerlerinin RESMÎ marka renkleri DEĞİL, onları
+    çağrıştıran yakın tonlardır — ve yalnız DEKORATİF bir çizgide kullanılır.
+    Resmî logo veya marka varlığı kullanılmaz (bilgi dosyası §9: "logolar
+    ilgili kullanım kuralları gözetilerek kullanılmalıdır"); pazaryerinin adı
+    butonda METİN olarak yazar, renk hiçbir zaman tek gösterge değildir.
+
+    Tanınmayan bir pazaryeri için ton YOKTUR; buton nötr bağlantı rengine
+    düşer. Uydurma bir marka rengi üretilmez.
+  */
+  --mp-amazon: #c2571a; /* turuncuya yakın, açık yüzeyde okunur bir ton */
+  --mp-hepsiburada: #d63f1e; /* turuncu-kırmızı */
+  --mp-trendyol: #d4640b; /* koyu turuncu */
+
   /* --- Durum renkleri: marka vurgularından AYRI (bilgi dosyası §15) --- */
   --rf-status-success: #067647;
   --rf-status-info: #175cd3;
@@ -104,6 +124,11 @@
 
   /* Odak halkası — her zeminde ≥3:1 görünür olmalı */
   --color-focus: var(--rf-blue-600);
+
+  /* Pazaryeri vurguları — yalnız dekoratif çizgi; gerekçe ham palet notunda. */
+  --color-marketplace-amazon: var(--mp-amazon);
+  --color-marketplace-hepsiburada: var(--mp-hepsiburada);
+  --color-marketplace-trendyol: var(--mp-trendyol);
 
   /* Durumlar */
   --color-success: var(--rf-status-success);

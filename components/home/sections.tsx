@@ -8,6 +8,7 @@ import { FeaturedProductsSection } from "@/components/home/FeaturedProductsSecti
 import { Hero } from "@/components/home/Hero";
 import { MarketplaceSection } from "@/components/home/MarketplaceSection";
 import { ServiceProcessSection } from "@/components/home/ServiceProcessSection";
+import { ServiceShowcaseSection } from "@/components/home/ServiceShowcaseSection";
 import { ServicesSection } from "@/components/home/ServicesSection";
 import { TrustSection } from "@/components/home/TrustSection";
 import { ValuePropositionSection } from "@/components/home/ValuePropositionSection";
@@ -61,6 +62,7 @@ const SECTION_RENDERERS: Record<HomeSectionId, (data: HomeData) => ReactNode> = 
   kategoriler: (data) => <CategoriesSection result={data.categories} />,
   markalar: (data) => <BrandsSection result={data.brands} />,
   hizmetler: (data) => <ServicesSection result={data.services} />,
+  "servis-vitrini": () => <ServiceShowcaseSection />,
   uyumluluk: () => <CompatibilitySection />,
   surec: () => <ServiceProcessSection />,
   pazaryerleri: (data) => <MarketplaceSection siteConfig={data.siteConfig} />,
