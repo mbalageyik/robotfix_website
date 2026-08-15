@@ -32,7 +32,9 @@ export default async function AdminLoginPage({
   return (
     <Container width="narrow" className="flex min-h-dvh flex-col justify-center py-12">
       <div className="mb-6">
-        <p className="text-overline uppercase text-accent-tech">Robot Fix</p>
+        {/* `uppercase` yok: Türkçe büyütme marka adını yasak varyanta çevirir
+            (gerekçe: components/admin/AdminShell.tsx). */}
+        <p className="text-overline text-accent-tech">Robot Fix</p>
         <h1 className="mt-2 text-h2">Yönetim paneli</h1>
         <p className="mt-2 text-body text-text-muted">
           Devam etmek için yönetici hesabınızla giriş yapın.

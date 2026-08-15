@@ -22,19 +22,22 @@ export interface AdminShellProps {
   children: ReactNode;
 }
 
-export function AdminShell({
-  title,
-  description,
-  actions,
-  adminEmail,
-  children,
-}: AdminShellProps) {
+export function AdminShell({ title, description, actions, adminEmail, children }: AdminShellProps) {
   return (
     <>
       <header className="border-b border-border bg-surface">
         <Container width="wide" className="flex flex-col gap-3 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-overline uppercase text-accent-tech">Robot Fix · Yönetim</p>
+            {/*
+              `uppercase` KULLANILMAZ — marka adı burada geçiyor.
+              Belge `lang="tr"` olduğu için tarayıcı Türkçe büyütme uygular ve
+              "Fix"in "i"si noktalı büyük harfe döner; ekranda CLAUDE.md'nin
+              yasakladığı varyant belirir. Kaynak metin doğru yazıldığı için
+              düz bir yazım denetimi bunu YAKALAMAZ.
+              Aynı tuzak ana sayfada da çıkmıştı; çözüm orada da budur.
+              Bekçi: `__tests__/home-content.test.ts` → "üst etiketlerde marka adı".
+            */}
+            <p className="text-overline text-accent-tech">Robot Fix · Yönetim</p>
             <form action={signOutAction} className="flex items-center gap-3">
               <span className="text-caption text-text-muted">{adminEmail}</span>
               <Button type="submit" variant="ghost" size="sm">

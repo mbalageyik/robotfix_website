@@ -66,6 +66,20 @@ const homepageCode = HOMEPAGE_FILES.map((file) => ({
   code: stripComments(readFileSync(join(root, file), "utf8")),
 }));
 
+/*
+  TÜM ARAYÜZ YÜZEYİ — marka yazımı bekçisi için.
+
+  Marka yazımı kuralı ana sayfaya özgü DEĞİLDİR (CLAUDE.md: "tüm metinsel
+  yüzeylerde"). Bekçi ilk yazıldığında yalnız ana sayfayı tarıyordu ve tam da
+  bu yüzden yönetim panelindeki iki ihlali kaçırdı: `AdminShell` ve giriş
+  sayfası marka adını `uppercase` ile basıyordu. Kapsam o olaydan sonra
+  arayüzün tamamına genişletildi.
+*/
+const uiCode = ["app", "components", "lib"].flatMap(collectFiles).map((file) => ({
+  file,
+  code: stripComments(readFileSync(join(root, file), "utf8")),
+}));
+
 describe("taranan dosya kümesi", () => {
   it("bölüm bileşenlerini gerçekten buluyor", () => {
     // Yol yanlışsa testler sessizce "geçmemeli".
@@ -200,7 +214,8 @@ describe("üst etiketlerde marka adı (Türkçe büyütme tuzağı)", () => {
   });
 
   it("bileşenlerde satır içi yazılan overline'lar marka adı taşımaz", () => {
-    const offenders = homepageCode.flatMap(({ file, code }) =>
+    // Kapsam: arayüzün TAMAMI (app + components + lib), yalnız ana sayfa değil.
+    const offenders = uiCode.flatMap(({ file, code }) =>
       [...code.matchAll(/overline="([^"]*)"/g)]
         .filter((match) => BRAND.test(match[1]))
         .map((match) => `${file}: ${match[1]}`),
@@ -217,8 +232,12 @@ describe("üst etiketlerde marka adı (Türkçe büyütme tuzağı)", () => {
       Aynı tuzak `uppercase` sınıfı taşıyan her öğede geçerlidir. Sınıfla
       metnin aynı satırda bulunduğu durumları yakalar; bugünkü kullanım
       biçimi budur.
+
+      Kapsam arayüzün TAMAMIDIR: bu kural ana sayfaya özgü değil, marka
+      yazımı kuralıdır (CLAUDE.md). Dar kapsam yönetim panelindeki iki
+      ihlali kaçırmıştı.
     */
-    const offenders = homepageCode.flatMap(({ file, code }) =>
+    const offenders = uiCode.flatMap(({ file, code }) =>
       code
         .split("\n")
         .filter((line) => line.includes("uppercase") && BRAND.test(line))
