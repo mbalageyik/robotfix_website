@@ -47,13 +47,18 @@ export async function WhatsAppButton({
   ...rest
 }: WhatsAppButtonProps) {
   // Numara önce site_settings'ten, yoksa env'den gelir. Prop sözleşmesi değişmedi.
-  const { whatsappPhone } = await getSiteConfig();
+  const { whatsappPhone, whatsappTemplates } = await getSiteConfig();
   if (!whatsappPhone) return null;
 
+  /*
+    Mesaj gövdesi yöneticinin yazdığı şablondan üretilir (bilgi dosyası §8,
+    §17). Şablon girilmemişse `buildProductMessage`/`buildServiceMessage`
+    kod içi varsayılana düşer — panel boşken hiçbir şey kırılmaz.
+  */
   const message =
     rest.intent === "product"
-      ? buildProductMessage(rest.product)
-      : buildServiceMessage(rest.service ?? {});
+      ? buildProductMessage(rest.product, whatsappTemplates.product)
+      : buildServiceMessage(rest.service ?? {}, whatsappTemplates.service);
 
   const href = buildWhatsAppUrl({ phone: whatsappPhone, message });
 

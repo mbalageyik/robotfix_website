@@ -108,6 +108,82 @@ function composeLines(lines: (string | null | undefined | false)[]): string {
     .join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Yönetici şablonları (bilgi dosyası §8, §17)
+// ---------------------------------------------------------------------------
+/*
+  Şablonlar `site_settings.whatsapp_template_product` / `_service` alanlarından
+  gelir ve YÖNETİCİ tarafından yazılır.
+
+  BU DOSYA ŞABLONU KENDİ OKUMAZ — saf kalır (env yok, ağ yok, React yok).
+  Çözümleme `lib/site-config.ts` içindedir; şablon buraya bir ARGÜMAN olarak
+  girer. Böylece davranış doğrudan test edilebilir kalır.
+
+  YER TUTUCU SÖZLEŞMESİ (§8'deki adlarla):
+    ürün   → [ÜRÜN ADI] [MARKA] [ÜRÜN KODU] [FİYAT] [ÜRÜN URL]
+    servis → [MARKA/MODEL] [SORUN]
+
+  DEĞERİ OLMAYAN YER TUTUCU — İKİ FARKLI KURAL, İKİSİ DE BİLİNÇLİ:
+
+  1. ÜRÜN mesajında değeri olmayan yer tutucunun bulunduğu SATIR tümüyle
+     çıkarılır. Gerekçe §8: "Fiyat bulunmuyorsa mesajda boş veya hatalı bir
+     değer gösterilmemelidir." Satır birimi seçildi çünkü cümle birimi
+     Türkçede güvenilir değildir: fiyat metninin kendisi nokta içerir
+     ("1.249,00 TL") ve cümleye göre bölmek mesajı ortasından keserdi.
+     Bu kural, şablonsuz varsayılan mesajın davranışının aynısıdır.
+
+  2. SERVİS mesajında değeri olmayan yer tutucu SATIRI SİLMEZ; müşterinin
+     dolduracağı işaretle (…) değiştirir. Çünkü o alanlar zaten müşteriden
+     beklenir — satırı silmek soruyu hiç sormamak olurdu.
+
+  TANINMAYAN YER TUTUCU olduğu gibi bırakılır. Yöneticinin yazdığı metni
+  sessizce silmeyiz; görünür kalması sorunun fark edilmesini sağlar.
+*/
+
+type TemplateValues = Record<string, string | null>;
+
+/**
+ * Şablondaki yer tutucuları değerlerle değiştirir.
+ *
+ * @param onMissing `"drop-line"` → değeri olmayan yer tutucunun satırı silinir.
+ *                  Aksi hâlde verilen yedek metin yazılır.
+ */
+function renderTemplate(
+  template: string,
+  values: TemplateValues,
+  onMissing: "drop-line" | { fallback: string },
+): string {
+  const lines = template.split(/\r?\n/).map((line) => {
+    let dropLine = false;
+
+    const rendered = line.replaceAll(/\[([^\]]+)\]/g, (match, rawToken: string) => {
+      const token = `[${rawToken.trim().toUpperCase()}]`;
+
+      // Sözlükte olmayan yer tutucu: dokunmadan bırak.
+      if (!(token in values)) return match;
+
+      const value = values[token]?.trim();
+      if (value) return value;
+
+      if (onMissing === "drop-line") {
+        dropLine = true;
+        return "";
+      }
+      return onMissing.fallback;
+    });
+
+    return dropLine ? null : rendered;
+  });
+
+  return composeLines(lines);
+}
+
+/** Şablon girilmemişse (boş/boşluk) varsayılana düşülür. */
+function usableTemplate(template: string | null | undefined): string | null {
+  const trimmed = template?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export interface ProductMessageInput {
   /** Ürün adı — zorunlu; mesajın konusudur. */
   productName: string;
@@ -132,10 +208,26 @@ export interface ProductMessageInput {
  * // "Ana Fırça" hakkında bilgi almak ve sipariş durumunu öğrenmek istiyorum.
  * // Ürün kodu: RF-101
  */
-export function buildProductMessage(input: ProductMessageInput): string {
+export function buildProductMessage(input: ProductMessageInput, template?: string | null): string {
   const name = input.productName?.trim();
   if (!name) {
     throw new Error("buildProductMessage: productName zorunludur.");
+  }
+
+  const custom = usableTemplate(template);
+  if (custom) {
+    return renderTemplate(
+      custom,
+      {
+        "[ÜRÜN ADI]": name,
+        "[MARKA]": input.brand ?? null,
+        "[ÜRÜN KODU]": input.sku ?? null,
+        "[FİYAT]": input.price ?? null,
+        "[ÜRÜN URL]": input.url ?? null,
+      },
+      // Fiyatı olmayan üründe fiyat satırı hiç yazılmaz (§8).
+      "drop-line",
+    );
   }
 
   return composeLines([
@@ -163,8 +255,21 @@ const CUSTOMER_FILLS = "…";
  * Servis mesajı (bilgi dosyası §8). Bilinen bağlam doldurulur; bilinmeyen
  * alanlar müşterinin tamamlaması için yer tutucuyla bırakılır.
  */
-export function buildServiceMessage(input: ServiceMessageInput = {}): string {
+export function buildServiceMessage(
+  input: ServiceMessageInput = {},
+  template?: string | null,
+): string {
   const device = [input.brand?.trim(), input.model?.trim()].filter(Boolean).join(" ");
+
+  const custom = usableTemplate(template);
+  if (custom) {
+    return renderTemplate(
+      custom,
+      { "[MARKA/MODEL]": device || null, "[SORUN]": input.issue ?? null },
+      // Servis alanlarını müşteri doldurur; satır SİLİNMEZ (yukarıdaki 2. kural).
+      { fallback: CUSTOMER_FILLS },
+    );
+  }
 
   return composeLines([
     "Merhaba Robot Fix,",

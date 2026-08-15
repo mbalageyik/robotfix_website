@@ -150,3 +150,102 @@ describe("buildServiceMessage", () => {
     expect(buildServiceMessage({ brand: "Xiaomi" })).toContain("Marka/model: Xiaomi");
   });
 });
+
+/*
+  YÖNETİCİ ŞABLONLARI (bilgi dosyası §8, §17).
+
+  Bu alanlar `site_settings`te uzun süre DOLDURULABİLİR ama ETKİSİZDİ: panel
+  kaydediyordu, mesaj üretimi okumuyordu. Aşağıdaki testler o sessiz kırığın
+  geri gelmesini engeller — özellikle "şablon boşken varsayılana düşülür"
+  garantisini, çünkü üretimde bu alanlar bugün boştur.
+*/
+describe("yönetici şablonu — ürün mesajı", () => {
+  const INPUT = {
+    productName: "Ana Fırça Modülü",
+    brand: "Roborock",
+    sku: "RF-101",
+    price: "1.249,00 TL",
+    url: "https://ornek.test/urunler/ana-firca",
+  };
+
+  it("şablondaki yer tutucuları değerlerle doldurur", () => {
+    const template = [
+      "Merhaba, [ÜRÜN ADI] soracaktım.",
+      "Marka: [MARKA]",
+      "Kod: [ÜRÜN KODU]",
+      "Fiyat: [FİYAT]",
+      "Adres: [ÜRÜN URL]",
+    ].join("\n");
+
+    expect(buildProductMessage(INPUT, template)).toBe(
+      [
+        "Merhaba, Ana Fırça Modülü soracaktım.",
+        "Marka: Roborock",
+        "Kod: RF-101",
+        "Fiyat: 1.249,00 TL",
+        "Adres: https://ornek.test/urunler/ana-firca",
+      ].join("\n"),
+    );
+  });
+
+  it.each([undefined, null, "", "   "])("şablon %o iken varsayılana düşer", (template) => {
+    expect(buildProductMessage(INPUT, template)).toBe(buildProductMessage(INPUT));
+  });
+
+  it("değeri olmayan yer tutucunun SATIRINI çıkarır (§8: boş/hatalı değer gösterilmez)", () => {
+    const template = ["[ÜRÜN ADI] hakkında bilgi almak istiyorum.", "Fiyat: [FİYAT]"].join("\n");
+    const message = buildProductMessage({ productName: "HEPA Filtre" }, template);
+
+    expect(message).toBe("HEPA Filtre hakkında bilgi almak istiyorum.");
+    expect(message).not.toContain("Fiyat");
+    expect(message).not.toContain("undefined");
+  });
+
+  it("fiyat metnindeki nokta satırı bölmez", () => {
+    // Cümleye göre bölen bir uygulama "1.249,00" üzerinde kırılırdı.
+    const message = buildProductMessage(INPUT, "Fiyat: [FİYAT] — teşekkürler.");
+    expect(message).toBe("Fiyat: 1.249,00 TL — teşekkürler.");
+  });
+
+  it("tanınmayan yer tutucuyu olduğu gibi bırakır (yöneticinin metni silinmez)", () => {
+    const message = buildProductMessage(INPUT, "[ÜRÜN ADI] / [BİLİNMEYEN]");
+    expect(message).toBe("Ana Fırça Modülü / [BİLİNMEYEN]");
+  });
+
+  it("yer tutucu yazımında büyük/küçük harf ve boşluk toleranslıdır", () => {
+    expect(buildProductMessage(INPUT, "[ürün adı] · [ Ürün Kodu ]")).toBe(
+      "Ana Fırça Modülü · RF-101",
+    );
+  });
+
+  it("şablon kullanılsa da ürün adı zorunludur", () => {
+    expect(() => buildProductMessage({ productName: " " }, "[ÜRÜN ADI]")).toThrow(
+      /productName zorunludur/,
+    );
+  });
+});
+
+describe("yönetici şablonu — servis mesajı", () => {
+  it("bilinen bağlamı doldurur", () => {
+    const message = buildServiceMessage(
+      { brand: "Xiaomi", model: "S10", issue: "şarj olmuyor" },
+      "Cihaz: [MARKA/MODEL]\nSorun: [SORUN]",
+    );
+    expect(message).toBe("Cihaz: Xiaomi S10\nSorun: şarj olmuyor");
+  });
+
+  it("değer yoksa SATIRI SİLMEZ, müşteriye bırakır", () => {
+    /*
+      Ürün mesajından bilinçli olarak FARKLI: servis alanları zaten
+      müşteriden beklenir; satırı silmek soruyu hiç sormamak olurdu.
+    */
+    const message = buildServiceMessage({}, "Cihaz: [MARKA/MODEL]\nSorun: [SORUN]");
+    expect(message).toBe("Cihaz: …\nSorun: …");
+  });
+
+  it.each([undefined, null, "", "   "])("şablon %o iken varsayılana düşer", (template) => {
+    expect(buildServiceMessage({ brand: "Xiaomi" }, template)).toBe(
+      buildServiceMessage({ brand: "Xiaomi" }),
+    );
+  });
+});

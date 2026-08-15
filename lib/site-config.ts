@@ -78,6 +78,12 @@ export interface ResolvedSiteConfig {
   mapsUrl: string | null;
   /** Doğrulanmış pazaryeri MAĞAZA bağlantıları. Boş olanlar hiç yer almaz. */
   storeLinks: { marketplace: string; label: string; url: string }[];
+  /*
+    Yöneticinin yazdığı WhatsApp mesaj şablonları (bilgi dosyası §8, §17).
+    `null` = girilmemiş → `lib/whatsapp.ts` kod içi varsayılana düşer.
+    Yer tutucu sözleşmesi o dosyada tanımlıdır; burada yalnız TAŞINIR.
+  */
+  whatsappTemplates: { product: string | null; service: string | null };
   /** Değerin nereden geldiği — `/veri-kontrol` bunu gösterir. */
   source: "database" | "env";
 }
@@ -122,6 +128,8 @@ export async function getSiteConfig(): Promise<ResolvedSiteConfig> {
       workingHours: null,
       mapsUrl: null,
       storeLinks: [],
+      // Veritabanı okunamadıysa şablon da yoktur; varsayılan mesaj kullanılır.
+      whatsappTemplates: { product: null, service: null },
       source: "env",
     };
   }
@@ -142,6 +150,10 @@ export async function getSiteConfig(): Promise<ResolvedSiteConfig> {
       const url = settings[key];
       return url ? [{ marketplace, label, url }] : [];
     }),
+    whatsappTemplates: {
+      product: settings.whatsapp_template_product,
+      service: settings.whatsapp_template_service,
+    },
     source: settings.whatsapp_phone ? "database" : "env",
   };
 }
