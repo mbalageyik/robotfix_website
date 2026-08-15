@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { ReactElement, SVGProps } from "react";
 
 /*
   Robot Fix simge seti — el yazımı SVG, harici ikon paketi yok.
@@ -138,4 +138,158 @@ export function SpinnerIcon(props: IconProps) {
       <path d="M21 12a9 9 0 0 0-9-9" />
     </svg>
   );
+}
+
+// ---------------------------------------------------------------------------
+// İletişim ve yön simgeleri
+// ---------------------------------------------------------------------------
+
+/** Adres / konum. */
+export function MapPinIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21s6.5-5.4 6.5-10.2A6.5 6.5 0 0 0 5.5 10.8C5.5 15.6 12 21 12 21Z" />
+      <circle cx="12" cy="10.6" r="2.4" />
+    </Icon>
+  );
+}
+
+/** Telefon. */
+export function PhoneIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8.2 4.5H5.6A1.6 1.6 0 0 0 4 6.2c0 7.6 6.2 13.8 13.8 13.8a1.6 1.6 0 0 0 1.7-1.6v-2.6l-3.6-1.3-1.7 1.9a12.4 12.4 0 0 1-4.6-4.6l1.9-1.7Z" />
+    </Icon>
+  );
+}
+
+/** İleri yönlendirme — kategori ve bölüm bağlantılarında. */
+export function ArrowRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 12h15" />
+      <path d="m13.5 6 6 6-6 6" />
+    </Icon>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Hizmet simgeleri — `services.icon_key` sütununun karşılıkları
+// ---------------------------------------------------------------------------
+/*
+  `icon_key` serbest metindir ama ARAYÜZDE serbest değildir: yalnız aşağıdaki
+  sözlükte karşılığı olan anahtarlar simge üretir. Tanınmayan anahtar sessizce
+  simgesiz render edilir — kart yine ad ve açıklamayla anlamlıdır (simge tek
+  gösterge değildir, bilgi dosyası §15).
+*/
+
+/** Batarya kontrolü ve değişimi. */
+export function BatteryIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="7.5" width="15" height="9" rx="2" />
+      <path d="M21 10.5v3" />
+      <path d="M6.5 10.5v3" />
+      <path d="M10 10.5v3" />
+    </Icon>
+  );
+}
+
+/** Motor, fan ve emiş sistemi. */
+export function FanIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M12 10c0-3 .8-5.5 2.6-5.5 1.5 0 2.2 1.6 1.4 3.1C15.2 9.2 13.6 10 12 10Z" />
+      <path d="M14 12c3 0 5.5.8 5.5 2.6 0 1.5-1.6 2.2-3.1 1.4C14.8 15.2 14 13.6 14 12Z" />
+      <path d="M10 12c-3 0-5.5-.8-5.5-2.6 0-1.5 1.6-2.2 3.1-1.4C9.2 8.8 10 10.4 10 12Z" />
+      <path d="M12 14c0 3-.8 5.5-2.6 5.5-1.5 0-2.2-1.6-1.4-3.1C8.8 14.8 10.4 14 12 14Z" />
+    </Icon>
+  );
+}
+
+/** Fırça, tekerlek ve mekanik. */
+export function BrushIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="4.5" width="16" height="6" rx="2" />
+      <path d="M7 10.5v3.5" />
+      <path d="M10.3 10.5v5" />
+      <path d="M13.7 10.5v5" />
+      <path d="M17 10.5v3.5" />
+    </Icon>
+  );
+}
+
+/** Sensör ve navigasyon. */
+export function SensorIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M8.5 15.5a5 5 0 0 1 0-7" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+      <path d="M6 18a9 9 0 0 1 0-12" />
+      <path d="M18 6a9 9 0 0 1 0 12" />
+    </Icon>
+  );
+}
+
+/** Şarj istasyonu ve kart. */
+export function ChargingIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M13 3.5 6.5 13H12l-1 7.5L17.5 11H12l1-7.5Z" />
+    </Icon>
+  );
+}
+
+/** Arıza tespiti. */
+export function DiagnoseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="m15 15 4.5 4.5" />
+      <path d="M10.5 7.8v5.4" />
+      <path d="M7.8 10.5h5.4" />
+    </Icon>
+  );
+}
+
+/** Periyodik bakım ve temizlik — anahtar/servis. */
+export function WrenchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M15.6 4.4a4.6 4.6 0 0 0-5.9 5.6l-5.1 5.1a1.7 1.7 0 0 0 0 2.4l1.9 1.9a1.7 1.7 0 0 0 2.4 0l5.1-5.1a4.6 4.6 0 0 0 5.6-5.9l-2.7 2.7-2.5-.6-.6-2.5 2.7-2.7Z" />
+    </Icon>
+  );
+}
+
+/** Yedek parça satışı. */
+export function PartsIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m12 3.5 7.5 4v9L12 20.5 4.5 16.5v-9L12 3.5Z" />
+      <path d="M4.5 7.5 12 11.5l7.5-4" />
+      <path d="M12 11.5v9" />
+    </Icon>
+  );
+}
+
+/** `services.icon_key` → simge bileşeni. Tanınmayan anahtar `null` döner. */
+const SERVICE_ICONS: Record<string, (props: IconProps) => ReactElement> = {
+  battery: BatteryIcon,
+  motor: FanIcon,
+  brush: BrushIcon,
+  sensor: SensorIcon,
+  charging: ChargingIcon,
+  diagnose: DiagnoseIcon,
+  service: WrenchIcon,
+  parts: PartsIcon,
+};
+
+export function getServiceIcon(
+  iconKey: string | null | undefined,
+): ((props: IconProps) => ReactElement) | null {
+  if (!iconKey) return null;
+  return SERVICE_ICONS[iconKey.trim().toLowerCase()] ?? null;
 }

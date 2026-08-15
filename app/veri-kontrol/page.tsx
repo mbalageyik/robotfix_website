@@ -14,11 +14,18 @@ import {
   listProducts,
 } from "@/lib/data/products";
 import { listBrands, listCategories, listServices } from "@/lib/data/taxonomy";
+import { listProductSitemapEntries } from "@/lib/data/sitemap";
 import { getSiteConfig } from "@/lib/site-config";
 import { isSupabaseConfigured, showDemoContent } from "@/lib/supabase/env";
 import { getPublicClient } from "@/lib/supabase/public-client";
 import { fail, ok, type DataResult } from "@/lib/data/result";
-import type { ProductDetail, ProductListItem } from "@/lib/data/types";
+import type {
+  BrandRow,
+  CategoryRow,
+  ProductDetail,
+  ProductListItem,
+  ServiceRow,
+} from "@/lib/data/types";
 
 /*
   VERİ KATMANI DOĞRULAMA SAYFASI.
@@ -97,10 +104,7 @@ async function probeErrorPath(): Promise<DataResult<never>> {
 
   // Not: `select()` serbest metin aldığı için bu satır typecheck'ten GEÇER;
   // hata yalnız çalışma zamanında PostgREST tarafından üretilir (42703).
-  const { error } = await getPublicClient()
-    .from("products")
-    .select("bu_sutun_yok")
-    .limit(1);
+  const { error } = await getPublicClient().from("products").select("bu_sutun_yok").limit(1);
 
   if (error) return fail("query_failed", error.message, error.code);
   return ok(undefined as never);
@@ -137,7 +141,10 @@ function ProductDetailBlock({
                 />
               }
             />
-            <Row label="Bulunabilirlik" value={<AvailabilityBadge status={product.availability} />} />
+            <Row
+              label="Bulunabilirlik"
+              value={<AvailabilityBadge status={product.availability} />}
+            />
             <Row
               label="Orijinal / uyumlu"
               value={
@@ -246,6 +253,131 @@ function ProductDetailBlock({
   );
 }
 
+/*
+  ANA SAYFA SIZINTI KONTROLÜ (Faz 5) — yardımcılar.
+
+  "Sızıntı" burada iki şeyden biridir:
+    1. Tohum verisinin `[ÖRNEK]` işareti — ada bakılarak yakalanır,
+    2. `is_demo` bayrağı — satırın kendi alanı.
+
+  İkisi ayrı ayrı kontrol edilir: ada bakmak, bayrağı yanlış girilmiş bir
+  satırı da yakalar; bayrağa bakmak, adı temizlenmiş ama hâlâ demo olan
+  satırı yakalar. Tek ölçüt yeterli olmazdı.
+*/
+interface LeakRow {
+  id: string;
+  name: string;
+  slug: string;
+  isDemo: boolean;
+}
+
+/** Tohum verisinin bıraktığı işaretler. Üretimde hiçbiri görünmemelidir. */
+function hasDemoMarker(row: LeakRow): boolean {
+  return row.name.includes("[ÖRNEK]") || row.slug.startsWith("ornek-") || row.isDemo;
+}
+
+function LeakList({ title, result }: { title: string; result: DataResult<LeakRow[]> }) {
+  if (!result.ok) {
+    return (
+      <ErrorState
+        title={`${title} — sorgu başarısız (${result.error.kind})`}
+        description={result.error.message}
+      />
+    );
+  }
+
+  const leaked = result.data.filter(hasDemoMarker);
+
+  return (
+    <div className="border-b border-border py-3 last:border-b-0">
+      <p className="text-caption font-semibold text-text">
+        {title} — {result.data.length} satır ana sayfaya düşüyor
+      </p>
+      {result.data.length === 0 ? (
+        <p className="text-caption text-text-muted">
+          boş — bölüm ana sayfada gizlenir veya boş durum metni gösterir
+        </p>
+      ) : (
+        <p className="text-caption text-text-muted">
+          {result.data.map((row) => row.name).join(", ")}
+        </p>
+      )}
+      <p
+        className={
+          leaked.length === 0
+            ? "text-caption font-semibold text-success"
+            : "text-caption font-semibold text-danger"
+        }
+      >
+        {leaked.length === 0
+          ? "Demo/örnek işaretli satır YOK"
+          : `SIZINTI: ${leaked.length} demo satır ana sayfada görünür — ${leaked
+              .map((row) => row.slug)
+              .join(", ")}`}
+      </p>
+    </div>
+  );
+}
+
+function HomepageLeakBlock({
+  featured,
+  categories,
+  brands,
+  services,
+}: {
+  featured: DataResult<ProductListItem[]>;
+  categories: DataResult<CategoryRow[]>;
+  brands: DataResult<BrandRow[]>;
+  services: DataResult<ServiceRow[]>;
+}) {
+  const toRows = <T extends { id: string; name: string; slug: string; is_demo: boolean }>(
+    result: DataResult<T[]>,
+  ): DataResult<LeakRow[]> =>
+    result.ok
+      ? ok(
+          result.data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            slug: row.slug,
+            isDemo: row.is_demo,
+          })),
+        )
+      : result;
+
+  return (
+    <Card>
+      <h2 className="text-h3">Ana sayfa sızıntı kontrolü</h2>
+      <p className="mt-2 text-caption text-text-muted">
+        Ana sayfanın dört sorgusu (<code>listFeaturedProducts</code>, <code>listCategories</code>,{" "}
+        <code>listBrands</code>, <code>listServices</code>) anon istemciyle çalışır ve{" "}
+        <code>status</code> filtresi yazmaz — görünürlüğü RLS belirler. Aşağıdaki her satır ana
+        sayfada gerçekten görünür; <code>[ÖRNEK]</code> veya <code>ornek-</code> işaretli hiçbir
+        kayıt burada bulunmamalıdır.
+      </p>
+      <div className="mt-3">
+        <LeakList
+          title="Öne çıkan ürünler (Robot Fix Seçkisi)"
+          result={
+            featured.ok
+              ? ok(
+                  featured.data.map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    slug: item.slug,
+                    isDemo: item.isDemo,
+                  })),
+                )
+              : featured
+          }
+        />
+        <LeakList title="Kategoriler" result={toRows(categories)} />
+        <LeakList title="Markalar" result={toRows(brands)} />
+        <LeakList title="Hizmetler" result={toRows(services)} />
+      </div>
+    </Card>
+  );
+}
+
 export default async function DataCheckPage() {
   const [
     productsResult,
@@ -258,6 +390,7 @@ export default async function DataCheckPage() {
     priceSortResult,
     noMatchResult,
     errorProbeResult,
+    sitemapResult,
     siteConfig,
   ] = await Promise.all([
     listProducts({}, "manual", { perPage: 8 }),
@@ -271,6 +404,9 @@ export default async function DataCheckPage() {
     // Hiçbir şeyle eşleşmeyecek arama → EmptyState yolu.
     listProducts({ search: "zzzz-eslesmeyen-arama-zzzz" }),
     probeErrorPath(),
+    // Faz 4: sitemap'in gördüğü ürünler. Buradaki sayı ile "Ürün listesi"
+    // bloğundaki sayı AYNI korumaya tabidir; ikisi de RLS'ten geçer.
+    listProductSitemapEntries(),
     getSiteConfig(),
   ]);
 
@@ -305,8 +441,8 @@ export default async function DataCheckPage() {
         </h1>
         <p className="mt-4 max-w-prose text-body-lg text-text-muted">
           Üretim navigasyonunda yer almaz, indekslenmez. Gösterilen ürünler{" "}
-          <strong>örnek veridir</strong>; fiyatları yoktur ve gerçek katalog yönetim
-          panelinden girilecektir.
+          <strong>örnek veridir</strong>; fiyatları yoktur ve gerçek katalog yönetim panelinden
+          girilecektir.
         </p>
       </Section>
 
@@ -363,8 +499,8 @@ export default async function DataCheckPage() {
                       <li key={item.id} className="flex flex-col gap-1 border-t border-border pt-3">
                         <span className="font-semibold text-text">{item.name}</span>
                         <span className="text-caption text-text-muted">
-                          {item.brand?.name ?? "markasız"} · {item.category?.name ?? "kategorisiz"} ·{" "}
-                          <code>{item.sku ?? "kodsuz"}</code>
+                          {item.brand?.name ?? "markasız"} · {item.category?.name ?? "kategorisiz"}{" "}
+                          · <code>{item.sku ?? "kodsuz"}</code>
                         </span>
                         <div className="flex flex-wrap items-center gap-3">
                           <AvailabilityBadge status={item.availability} />
@@ -518,7 +654,62 @@ export default async function DataCheckPage() {
               </p>
             )}
           />
+
+          {/*
+            SITEMAP SIZINTI KONTROLÜ (Faz 4).
+
+            Sitemap'e giren her slug herkese açık bir vaattir. Burada listelenen
+            slug'ların hiçbiri `[ÖRNEK]`/demo olmamalı ve hepsinin gerçek bir
+            `/urunler/<slug>` sayfası bulunmalıdır. `is_demo` filtresi sitemap
+            sorgusunda AYRICA uygulanır — arayüzdeki demo bayrağı açıkken bile.
+          */}
+          <ResultBlock
+            title="Sitemap'e giren ürünler"
+            result={sitemapResult}
+            render={(entries) =>
+              entries.length === 0 ? (
+                <EmptyState
+                  title="Sitemap'te ürün yok"
+                  description="Beklenen davranış: tohum verisinin tamamı draft + demo; sitemap boş kalır."
+                />
+              ) : (
+                <>
+                  <p className="text-caption text-text-muted">
+                    {entries.length} slug. Aşağıda &ldquo;ornek-&rdquo; ile başlayan veya{" "}
+                    <code>[ÖRNEK]</code> içeren bir slug GÖRÜNMEMELİDİR.
+                  </p>
+                  <ul className="mt-2 flex flex-col gap-1 text-caption text-text-muted">
+                    {entries.map((entry) => (
+                      <li key={entry.slug}>
+                        <code>/urunler/{entry.slug}</code>
+                        {entry.updatedAt ? ` · ${entry.updatedAt}` : " · lastmod yok"}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )
+            }
+          />
         </div>
+
+        {/*
+          ANA SAYFA SIZINTI KONTROLÜ (Faz 5).
+
+          Ana sayfa dört sorgu kullanır: öne çıkan ürünler, kategoriler,
+          markalar, hizmetler. Dördü de anon istemciyle çalışır ve `status`
+          filtresi YAZMAZ — görünürlüğü RLS belirler. Bu blok, o dört
+          kaynaktan ana sayfaya düşen HER SATIRI adıyla listeler ve demo
+          sızıntısını ayrıca işaretler.
+
+          Yeşil ölçüt: `[ÖRNEK]` içeren veya `ornek-` ile başlayan hiçbir ad
+          burada GÖRÜNMEMELİDİR (demo görünürlüğü kapalıyken).
+        */}
+        <HomepageLeakBlock
+          featured={featuredResult}
+          categories={categoriesResult}
+          brands={brandsResult}
+          services={servicesResult}
+        />
 
         <ProductDetailBlock
           title="Ürün detayı — zengin (görselli, bağlantılı, elle ilgili ürünler)"
@@ -537,8 +728,8 @@ export default async function DataCheckPage() {
         <Card>
           <h2 className="text-h3">Fiyat davranışı</h2>
           <p className="mt-2 text-caption text-text-muted">
-            Fiyatı olmayan üründe hiçbir yerde 0 TL, boş değer veya
-            &ldquo;undefined&rdquo; görünmemelidir.
+            Fiyatı olmayan üründe hiçbir yerde 0 TL, boş değer veya &ldquo;undefined&rdquo;
+            görünmemelidir.
           </p>
           <div className="mt-3 grid gap-4 sm:grid-cols-3">
             <div>
@@ -559,8 +750,8 @@ export default async function DataCheckPage() {
         <Card>
           <h2 className="text-h3">₺ glif kontrolü</h2>
           <p className="mt-2 text-caption text-text-muted">
-            Üç font ailesinde de Türk lirası sembolü (U+20BA) render edilmeli; yedek fonta
-            düşerse harflerden görünür biçimde ayrışır.
+            Üç font ailesinde de Türk lirası sembolü (U+20BA) render edilmeli; yedek fonta düşerse
+            harflerden görünür biçimde ayrışır.
           </p>
           <div className="mt-3 flex flex-col gap-2">
             <p className="font-display text-h3" data-testid="lira-display">
