@@ -762,3 +762,50 @@ saydam ucuna kayar. 243px'lik bir panelde metnin kaplamadığı "orta" zaten
 yoktur — fotoğraf orada resim değil dokudur, perdenin yükselmesi bir kayıp
 değildir. Panel yüksekliği veya açıklama uzunluğu ileride değişirse bu ölçüm
 tekrarlanmalıdır.
+
+## 38. Pazaryeri butonlarında resmî logo YOK — aranıp bulunmadığı için
+
+`MarketplaceSection` pazaryerlerini **metin butonuyla** gösterir ("Amazon
+mağazamıza git"). Bu bir üşengeçlik değil, aranıp belgelenmiş bir sonuçtur;
+karar §9'a dayandırılmadan önce resmî kaynaklar tarandı (Ağustos 2026).
+
+**Amazon — logo bu kullanımda AÇIKÇA YASAK.** Amazon Ads'in marka kullanım
+politikası ([advertising.amazon.com/resources/ad-policy/brand-usage][amz])
+şunu yazar: *"The Amazon and Smile logos are not permitted in third-party
+advertising by vendors and sellers linking in to Amazon."* Bizim durumumuz
+tam olarak budur — kendi Amazon mağazamıza bağlanan bir satıcı bağlantısı.
+Politikanın izin verdiği tek istisna, Amazon'un **birden çok perakendeciyle
+birlikte ve bağlantısız** bir dizide gösterilmesidir; bizimki o değil.
+
+İzinli alternatif "Available at Amazon" rozetidir ve resmî onay gerektirmez;
+ama varlığın kendisi Amazon'un marka portalından (Brand Registry kaydı
+üzerinden) alınır — üçüncü bir siteden indirilemez, yeniden çizilemez, rengi
+ve oranı değiştirilemez, asgari boyut kuralı vardır (yığılmış 90px, yatay
+140px @1x). İki nedenle kullanılmadı: (1) dosyayı meşru biçimde ancak
+işletmenin kendi satıcı hesabı temin edebilir, (2) rozet "bu ürün Amazon'da
+mevcuttur" diyen bir **bulunabilirlik iddiasıdır** ve §20'nin doğrulanmamış
+iddia yasağının alanına girer.
+
+**Hepsiburada — herkese açık resmî kaynak bulunamadı.**
+`kurumsal.hepsiburada.com` (Basın Odası dâhil) otomatik isteğe **HTTP 403**
+döndü; satıcı akademisindeki "Logo Kullanımı" eğitimi giriş duvarının
+arkasında ve içerik döndürmedi. Üçüncü taraf logo bankaları (logokit,
+Wikimedia Commons) vardır ama **kullanılmadı**: bir logoyu rastgele bir
+siteden indirmek kullanım kurallarına uygunluğu kanıtlamaz.
+
+**Sonuç: metin butonu.** Pazaryerinin adı butonda açıkça yazar; ayrıca bir
+EYLEM söyler ("… mağazamıza git"), yalnız bir ad değildir. Yanındaki
+dekoratif çizgi marka renginin kendisi değil ona yakın bir tondur ve
+`aria-hidden`dır — kanal **yalnız renkle** anlatılmaz (§9, §15). Tanınmayan
+bir pazaryerinde renk uydurulmaz, nötr bağlantı rengine düşülür.
+
+Ölçüldü (375px ve 1440px, aynı değerler — buton renkleri viewport'tan
+bağımsız): buton metni zemininde **16,69:1**; butonun kendisi bölüm zemininden
+**dolguyla değil kenarlıkla** ayrılır ve o kenarlık **7,69:1**'dir (WCAG 1.4.11
+metin dışı sınır için 3:1 ister). Dokunma hedefi 50px.
+
+İşletme ileride resmî varlıkları kendi hesabından temin ederse bu karar
+yeniden açılabilir; o iş bir varlık temini ve onay işidir, bir kodlama işi
+değildir.
+
+[amz]: https://advertising.amazon.com/resources/ad-policy/brand-usage

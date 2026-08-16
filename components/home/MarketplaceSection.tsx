@@ -20,11 +20,28 @@ import type { ResolvedSiteConfig } from "@/lib/site-config";
   §9 gereği fiyat/stok senkronizasyonu izlenimi verilmez — sorumluluk
   cümlesi bölümün ayrılmaz parçasıdır.
 
-  RESMÎ LOGO KULLANILMAZ (§9: "logolar ilgili kullanım kuralları gözetilerek
-  kullanılmalıdır"). Pazaryeri adı butonda METİN olarak yazar; yanındaki
-  dekoratif çizgi yalnız kanalları birbirinden ayırmaya yarar ve tanınmayan
-  bir kanalda hiç boyanmaz. Gerçek marka varlığı istenirse bu ayrı bir onay
-  ve varlık temini işidir.
+  RESMÎ LOGO KULLANILMAZ — ARANDI, BULUNAMADI/YASAKLI (Ağustos 2026).
+  Karar §9'a ("logolar ilgili kullanım kuralları gözetilerek kullanılmalıdır")
+  dayandırılmadan önce resmî kaynaklar tarandı:
+
+    - AMAZON: marka kullanım politikası bu kullanımı AÇIKÇA yasaklıyor —
+      "The Amazon and Smile logos are not permitted in third-party advertising
+      by vendors and sellers linking in to Amazon." Bizimki tam olarak budur.
+      İzinli "Available at Amazon" rozeti ise Amazon'un marka portalından
+      (Brand Registry) alınır — üçüncü bir siteden indirilemez — ve "bu ürün
+      Amazon'da mevcuttur" diyen bir BULUNABİLİRLİK İDDİASIDIR (§20).
+    - HEPSİBURADA: herkese açık resmî varlık kaynağı bulunamadı; kurumsal site
+      (Basın Odası dâhil) 403 döndü, satıcı akademisi giriş duvarının ardında.
+      Üçüncü taraf logo bankaları kullanılmadı: bir logoyu rastgele bir siteden
+      indirmek kullanım kurallarına uygunluğu KANITLAMAZ.
+
+  Gerekçenin tamamı ve ölçülen kontrast değerleri: `docs/design-decisions.md`
+  §38. İşletme resmî varlıkları kendi hesabından temin ederse karar yeniden
+  açılabilir — o bir varlık temini ve onay işidir, kodlama işi değil.
+
+  Pazaryeri adı bu yüzden butonda METİN olarak yazar; yanındaki dekoratif çizgi
+  yalnız kanalları birbirinden ayırmaya yarar ve tanınmayan bir kanalda hiç
+  boyanmaz — kanal YALNIZ RENKLE anlatılmaz (§9, §15).
 */
 
 /**
