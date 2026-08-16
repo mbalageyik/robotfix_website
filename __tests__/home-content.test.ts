@@ -392,10 +392,27 @@ describe("hizmet panelleri (yatay şerit)", () => {
     expect(panelCode).toMatch(/\{isActive && <div className="pointer-events-auto">/);
   });
 
-  it("hizmet adı her durumda METİN olarak durur (simge tek gösterge değil)", () => {
-    // Ad butonun içinde; simge dekoratiftir.
+  it("hizmet adı her durumda METİN olarak durur (simge ve fotoğraf tek gösterge değil)", () => {
+    // Ad butonun içinde; simge ve panel fotoğrafı dekoratiftir.
     expect(panelCode).toContain("{item.name}");
-    expect(panelCode).toMatch(/aria-hidden="true"[\s\S]{0,400}ServiceIcon/);
+
+    /*
+      Zemin katmanının TAMAMI `aria-hidden` bir sarmalayıcının içindedir:
+      simge de, fotoğraf da. Ölçüt "kaç karakter sonra geçtiği" değil —
+      araya yeni katman eklendiğinde kırılan kırılgan bir kuraldı; ölçüt
+      ikisinin de dekoratif sarmalayıcı ile İÇERİK bloğu arasında kalmasıdır.
+    */
+    const decorativeStart = panelCode.indexOf('aria-hidden="true"');
+    const contentStart = panelCode.indexOf("relative z-20");
+    expect(decorativeStart).toBeGreaterThan(-1);
+    expect(contentStart).toBeGreaterThan(decorativeStart);
+
+    for (const decoration of ["<ServiceIcon", "<Image"]) {
+      const at = panelCode.indexOf(decoration);
+      expect(at, `${decoration} bulunamadı`).toBeGreaterThan(-1);
+      expect(at, `${decoration} dekoratif katmanın dışında`).toBeGreaterThan(decorativeStart);
+      expect(at, `${decoration} içerik bloğunun içinde`).toBeLessThan(contentStart);
+    }
   });
 
   it("mevcut simge sistemi yeniden kullanılır", () => {

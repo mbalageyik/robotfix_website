@@ -16,6 +16,71 @@
 | `public/videos/servis-vitrini.mp4`           | Video | Pixabay — "Repair, Electronics, Fix, Screw, Metal" (video id 9062, yükleyen: `padrinan`) | Pixabay Content License | Hayır           | **Geçici / yer tutucu** |
 | `public/gorseller/servis-vitrini-poster.jpg` | JPEG  | Yukarıdaki videodan alınan tek kare                                                      | Pixabay Content License | Hayır           | **Geçici / yer tutucu** |
 
+### Hizmet paneli fotoğrafları — `public/gorseller/hizmetler/`
+
+Sekizinin de lisansı **Pexels License**'tır: ticari kullanıma açıktır, atıf
+gerektirmez, değiştirilebilir. Sekizi de **yer tutucudur** — hiçbiri Robot Fix'in
+atölyesinde çekilmedi. Kullanım yeri: ana sayfadaki hizmet panelleri
+(`components/home/ServicePanels.tsx`, eşleme `lib/home/service-media.ts`).
+
+| Dosya                        | Kaynak (Pexels id)                                             | Fotoğrafçı     | Kadrajda ne var                                           |
+| ---------------------------- | -------------------------------------------------------------- | -------------- | --------------------------------------------------------- |
+| `batarya-modulu.jpg`         | "Hand Holding Drone Battery Charger" (38042837)                | Amar Preciado  | Elde tutulan batarya/besleme modülü, stüdyo zemini        |
+| `motor-olcum.jpg`            | "Technician Testing Electrical Motor Wires" (33531832)         | Bulat843       | Motor sargıları üzerinde ölçü probu tutan eller           |
+| `alt-yuz-firca-tekerlek.jpg` | "Close-up of Robotic Vacuum Cleaner Underside" (35147161)      | Andrey Matveev | Robot süpürgenin alt yüzü: tekerlek, paspas, fırça yuvası |
+| `lidar-sensor.jpg`           | "Modern White Robot Vacuum Cleaner on Wood Floor" (35147280)   | Andrey Matveev | Döner lidar kuleli robot süpürge, yandan                  |
+| `kart-olcum.jpg`             | "Technician Repairing Circuit Board in Workshop" (38264252)    | Bulat843       | Açılmış cihazın elektronik kartı üzerinde ölçüm           |
+| `ariza-tespit-tezgahi.jpg`   | "Close-up of Electronics Repair Workbench" (36027861)          | Eden FC        | Tamir tezgâhı: ölçü aleti, el aletleri, açılmış cihaz     |
+| `filtre-degisimi.jpg`        | "Technician Replacing Air Filter in Vacuum Cleaner" (34404157) | Bulat843       | Süpürge filtresinin motor ünitesi üzerinde değişimi       |
+| `yedek-parca-firca.jpg`      | "Vacuum Cleaner Parts on Bright Yellow Background" (33797539)  | Andrey Matveev | Sökülmüş ana fırça ve fırça kapağı, ürün çekimi           |
+
+**Neden bu sekizi.** Ölçüt üç maddeydi: (1) konu gerçekten o hizmeti anlatsın —
+uydurma bir "atölyemiz" sahnesi değil, cihazın/işin kendisi; (2) kadrajda
+**okunaklı üçüncü taraf markası olmasın**; (3) tanınabilir yüz olmasın — eller
+ve cihazlar var, "bizim ekibimiz" izlenimi yok. İkinci madde iki dosyada
+kırpmayla sağlandı: `alt-yuz-firca-tekerlek.jpg` ve `lidar-sensor.jpg`
+kaynaklarında gövde/etiket üzerinde üretici adı okunuyordu, ikisi de kadraj
+dışında bırakıldı; `filtre-degisimi.jpg` kaynağında teknisyenin tulumunda
+**başka bir servis firmasının adı** vardı, kadraj o satırın altından başlatıldı.
+Gerekçe bilgi dosyası §20: yetkili servis statüsü ve marka ortaklığı
+uydurulamaz — görsel yoluyla da ima edilemez.
+
+**Neden yerele indirildi.** `servis-vitrini.mp4` ile aynı gerekçe: hotlink her
+sayfa açılışını üçüncü bir sunucunun ayakta olmasına bağlardı. Dosyalar
+projenin kendi `public/` klasöründedir; `next/image` onları buradan servis eder.
+
+**Projeye alınırken yapılan işlem — sekizine de AYNI reçete** (Python/Pillow,
+betik geçici çalışma klasöründeydi, projeye girmedi):
+
+1. Kaynak Pexels CDN'inden 1400–1800 px genişlikte indirildi.
+2. **3:4 dikey kırpma** — panel açıkken geniş, kapalıyken dar bir şerittir;
+   dikey kaynak iki durumda da kadrajı ayakta tutar. Kırpma kutuları yukarıdaki
+   "okunaklı marka" kuralına göre seçildi.
+3. 1200×1600'e ölçeklendi (Lanczos).
+4. Gri tonlama → `autocontrast` (kesme %1) → **ortalama parlaklığı 104/255'e
+   çeken gama** (0,55–2,20 arasına sınırlı). Bu adım pozlamayı eşitler: sarı
+   fonlu ürün çekimiyle loş tezgâh çekimi aynı ağırlığa gelir.
+5. Kontrast ×1,06 → **iki tonlama**: siyah ucu `#0b1f33` (Gece Laciverti),
+   orta `#2f5a7d`, **beyaz ucu `#a9bccd`** — Sis Grisi ile Çelik Mavisi
+   arasında bir ara ton. Beyaz ucun kapatılması yalnız estetik değil: sekiz
+   dosyanın hiçbirinde bağıl parlaklık **0,56'yı geçmiyor**, yani panel
+   metninin kontrastı ölçülebilir bir ÜST SINIRA oturuyor. `ServicePanels`
+   içindeki perde oranları (%15 / %75 ve iki degrade bandı) bu sayıdan
+   türetildi; kontrast fotoğrafın hangi karesine denk geldiğine bırakılmadı.
+6. Orijinalin doygunluğu %30'a indirilmiş hâli **%18 oranında geri karıştırıldı**
+   — tümüyle düz bir filtre görüntüsü olmasın, fotoğraf kalsın diye.
+7. JPEG, kalite 80, `optimize`, `progressive`. Toplam ≈ 1,6 MB
+   (`__tests__/home-service-media.test.ts` dosya başına 500 KB ve toplamda
+   3 MB üst sınırını bekliyor).
+
+Reçete **tek** olduğu için sekiz fotoğraf yan yana geldiğinde tek elden çıkmış
+gibi durur; ham hâlleriyle bir stok görsel kolajı olurlardı.
+
+**Değiştirilecek.** Gerçek Robot Fix atölye/servis fotoğrafları sağlandığında bu
+sekiz dosya değiştirilecek ve bu bölüm kayıttan kaldırılacaktır. Kalıcı çözümde
+görselin `services` tablosuna taşınıp yönetim panelinden yüklenmesi tercih
+edilmelidir (gerekçe: `lib/home/service-media.ts`).
+
 ## `servis-vitrini.mp4` — ayrıntı
 
 **Sayfa:** <https://pixabay.com/videos/repair-electronics-fix-screw-metal-9062/>

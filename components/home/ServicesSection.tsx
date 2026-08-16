@@ -1,6 +1,7 @@
 import { Section } from "@/components/layout/Section";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { ServicePanels, type ServicePanelItem } from "@/components/home/ServicePanels";
+import { getServiceImage } from "@/lib/home/service-media";
 import { WhatsAppButton } from "@/components/whatsapp/WhatsAppButton";
 import { whatsappCtaLabels } from "@/lib/site-config";
 import type { DataResult } from "@/lib/data/result";
@@ -37,6 +38,13 @@ export function ServicesSection({ result }: { result: DataResult<ServiceRow[]> }
     name: service.name,
     description: service.short_description,
     iconKey: service.icon_key,
+    /*
+      Panel zemini fotoğrafı. Eşleme `icon_key` üzerinden yapılır ve
+      bulunamazsa `null` döner — hizmet yine listelenir, paneli degrade +
+      simge zemininde durur. Görsellerin YER TUTUCU olduğu ve neden şemada
+      değil kodda tutulduğu `lib/home/service-media.ts` başında yazılıdır.
+    */
+    image: getServiceImage(service.icon_key),
     /*
       Mesaj gövdesi ORTAK şablondan gelir ve hizmete göre uydurulmaz.
       `buildServiceMessage` marka/model ve sorun alanlarını müşterinin

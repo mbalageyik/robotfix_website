@@ -148,11 +148,11 @@ taşınır ve `Intl.NumberFormat` girdi olarak zaten sayı ister.
 
 `price_minor > 0` kısıtı vardır ve **`0` ile `NULL` asla aynı şey değildir**:
 
-| Değer  | Anlamı                         | Arayüz                       |
-| ------ | ------------------------------ | ---------------------------- |
-| `NULL` | Fiyat doğrulanmadı/girilmedi   | "Fiyat için iletişime geçin" |
-| `> 0`  | Doğrulanmış fiyat              | Biçimlendirilmiş tutar       |
-| `0`    | **Şema düzeyinde imkânsız**    | —                            |
+| Değer  | Anlamı                       | Arayüz                       |
+| ------ | ---------------------------- | ---------------------------- |
+| `NULL` | Fiyat doğrulanmadı/girilmedi | "Fiyat için iletişime geçin" |
+| `> 0`  | Doğrulanmış fiyat            | Biçimlendirilmiş tutar       |
+| `0`    | **Şema düzeyinde imkânsız**  | —                            |
 
 "0 TL" bir fiyat değil, bir veri hatasıdır; girilmesi engellenir (bilgi dosyası §6).
 
@@ -164,13 +164,13 @@ katmanında değil **şemada** engellenir.
 
 Teknik özellikler `jsonb` sütunu yerine ayrı tabloya alındı.
 
-| İhtiyaç                        | Tablo                      | JSONB                        |
-| ------------------------------ | -------------------------- | ---------------------------- |
-| Panelde tek tek düzenleme      | Satır güncelle             | Tüm belgeyi oku-değiştir-yaz |
-| Sıra (`display_order`)         | Sütun + indeks             | Dizi sırasına güven          |
-| Boş etiket/değer engeli        | `check` kısıtı             | Uygulama katmanı             |
-| Aynı etiketin tekrarı engeli   | `unique (product_id,label)`| Uygulama katmanı             |
-| İleride "özelliğe göre filtre" | Normal indeks              | GIN + operatör bilgisi       |
+| İhtiyaç                        | Tablo                       | JSONB                        |
+| ------------------------------ | --------------------------- | ---------------------------- |
+| Panelde tek tek düzenleme      | Satır güncelle              | Tüm belgeyi oku-değiştir-yaz |
+| Sıra (`display_order`)         | Sütun + indeks              | Dizi sırasına güven          |
+| Boş etiket/değer engeli        | `check` kısıtı              | Uygulama katmanı             |
+| Aynı etiketin tekrarı engeli   | `unique (product_id,label)` | Uygulama katmanı             |
+| İleride "özelliğe göre filtre" | Normal indeks               | GIN + operatör bilgisi       |
 
 Belirleyici olan son üç satır: JSONB'de bütünlük garantisi **uygulamaya düşerdi**.
 Bu, "veri bütünlüğünü uygulamaya bırakma" kuralına aykırı.
@@ -194,8 +194,8 @@ uyumluluk **doğrulanmış bir iddiadır** (§20). `NULL` = doğrulanmadı; aray
 "uyumluluk doğrulanmadı" diye açıkça yazar, sessizce "uyumlu" demez.
 
 **Şemada bilinçli olarak OLMAYAN alanlar:** yetkili servis, marka ortaklığı,
-sertifika. Bilgi dosyası §10 bunları yasaklıyor — *olmayan bir alan yanlışlıkla
-doldurulamaz.* Yasağı yorumla değil şemayla uyguluyoruz.
+sertifika. Bilgi dosyası §10 bunları yasaklıyor — _olmayan bir alan yanlışlıkla
+doldurulamaz._ Yasağı yorumla değil şemayla uyguluyoruz.
 
 ## 11. `related_products`: elle seçim önce, türetme sonra
 
@@ -258,10 +258,10 @@ eklenir; politika **metinleri değişmez** çünkü hepsi `is_admin()` üzerinde
 Sebep: Postgres'in `lower()` fonksiyonu C/ICU yerel ayarına göre çalışır ve
 varsayılan kurulumda Türkçe kurallarını uygulamaz:
 
-| Girdi | Postgres `lower()` | Türkçe doğrusu |
-| ----- | ------------------ | -------------- |
-| `I`   | `i`                | `ı`            |
-| `İ`   | `i̇` (i + birleşen nokta) | `i`      |
+| Girdi | Postgres `lower()`       | Türkçe doğrusu |
+| ----- | ------------------------ | -------------- |
+| `I`   | `i`                      | `ı`            |
+| `İ`   | `i̇` (i + birleşen nokta) | `i`            |
 
 İkincisi daha sinsi: `lower('İ')` iki kod noktalı bir dizi üretir; `[^a-z0-9]+`
 kuralı birleşen noktayı tireye çevirir ve **"İstasyon" → `i-stasyon`** olur.
@@ -282,7 +282,7 @@ kalıcı bir URL'dir. `__tests__/db/slugify.test.ts` bu davranışı kilitler.
 şöyle yazıyordu:
 
 ```ts
-query.select("... brand:brands ( ... )").eq("brands.slug", filters.brandSlug)
+query.select("... brand:brands ( ... )").eq("brands.slug", filters.brandSlug);
 ```
 
 SQL sezgisi bunun ürünleri filtreleyeceğini söyler. **Söylemez.** PostgREST'te gömme
@@ -291,10 +291,10 @@ yalnız eşleşmeyen satırların gömülü nesnesini `null` yapar.
 
 Ölçülen sonuç (16 demo ürün, `ornek-filtreler` kategorisinde 2 ürün var):
 
-| Sorgu                            | Dönen satır | `total` |
-| -------------------------------- | ----------- | ------- |
-| Gömme `!inner` **olmadan**       | **16**      | **16**  |
-| Gömme `!inner` **ile**           | 2           | 2       |
+| Sorgu                      | Dönen satır | `total` |
+| -------------------------- | ----------- | ------- |
+| Gömme `!inner` **olmadan** | **16**      | **16**  |
+| Gömme `!inner` **ile**     | 2           | 2       |
 
 Yani kategori sayfası tüm katalogu listeler, sayaç yanlış olur ve eşleşmeyen
 ürünler "markasız/kategorisiz" görünürdü.
@@ -317,11 +317,11 @@ test edilir.
 Faz 1'in açık bıraktığı soru ölçüldü. Yöntem: tarayıcıda canvas `measureText`
 advance karşılaştırması (CSS beyanına bakmak değil).
 
-| Aile           | ₺ advance (100px) | Sonuç              |
-| -------------- | ----------------- | ------------------ |
-| Archivo        | 57.80             | **glif VAR**       |
-| Manrope        | 60.97             | **glif VAR**       |
-| JetBrains Mono | 55.62             | **glif YOK**       |
+| Aile           | ₺ advance (100px) | Sonuç        |
+| -------------- | ----------------- | ------------ |
+| Archivo        | 57.80             | **glif VAR** |
+| Manrope        | 60.97             | **glif VAR** |
+| JetBrains Mono | 55.62             | **glif YOK** |
 
 JetBrains Mono için kanıt kesindir çünkü tek genişlikli bir fonttur: taşıdığı her
 glif 100px'te **60** ölçülür — `A M i 0 W . ı ğ Ş € $ £` dâhil. Yalnız `₺` 55.62
@@ -351,12 +351,12 @@ Harf ve rakamlar tek genişlikte kalır, yalnız para birimi simgesi yedeğe dü
 `supabase/config.toml` portları Supabase'in varsayılanı olan `5432x`'ten
 `5434x`'e kaydırır.
 
-| Servis    | Bu proje | Varsayılan |
-| --------- | -------- | ---------- |
-| API       | 54341    | 54321      |
-| Postgres  | 54342    | 54322      |
-| Studio    | 54343    | 54323      |
-| Inbucket  | 54344    | 54324      |
+| Servis   | Bu proje | Varsayılan |
+| -------- | -------- | ---------- |
+| API      | 54341    | 54321      |
+| Postgres | 54342    | 54322      |
+| Studio   | 54343    | 54323      |
+| Inbucket | 54344    | 54324      |
 
 Gerekçe: aynı makinede başka bir Supabase projesi (`vena-hospital-portal`)
 varsayılan portlarda çalışıyor. Kaydırma olmasaydı `supabase start` ya port
@@ -406,11 +406,11 @@ Next.js 16'da `middleware.ts`'in adı **`proxy.ts`** oldu; davranış aynıdır.
 
 Yetkilendirme **üç bağımsız hatta** kurulur ve hiçbiri tek başına yeterli sayılmaz:
 
-| Hat | Dosya | Görevi | Tek başına yeterli mi |
-| --- | ----- | ------ | --------------------- |
-| 1 | `proxy.ts` | Oturum çerezini tazeler + iyimser ön eleme | **Hayır** |
-| 2 | `lib/auth/dal.ts` | Her sayfa ve her aksiyonda gerçek kontrol | Uygulama hattı |
-| 3 | Postgres RLS | `is_admin()` politikaları | Veritabanı hattı |
+| Hat | Dosya             | Görevi                                     | Tek başına yeterli mi |
+| --- | ----------------- | ------------------------------------------ | --------------------- |
+| 1   | `proxy.ts`        | Oturum çerezini tazeler + iyimser ön eleme | **Hayır**             |
+| 2   | `lib/auth/dal.ts` | Her sayfa ve her aksiyonda gerçek kontrol  | Uygulama hattı        |
+| 3   | Postgres RLS      | `is_admin()` politikaları                  | Veritabanı hattı      |
 
 **`proxy.ts` yetkilendirme yapmaz.** Next.js dokümanı proxy'nin "tam oturum yönetimi
 veya yetkilendirme çözümü" olarak kullanılmamasını açıkça söyler: proxy her rotada,
@@ -463,8 +463,8 @@ yerinde kalır.
 
 **Service role anahtarının kullanıldığı yerlerin tam listesi:**
 
-| Yer | Amaç |
-| --- | ---- |
+| Yer                            | Amaç                             |
+| ------------------------------ | -------------------------------- |
 | `lib/supabase/admin-client.ts` | Anahtarın okunduğu **tek** dosya |
 
 Faz 3 sonunda `getAdminClient()` **hiçbir yerden çağrılmıyor**. İstemci ileride
@@ -609,12 +609,12 @@ kopyalayarak çoğaltma" der.
 Kopya **daima `draft`** doğar: benzer bir ürünü çoğaltıp düzenlemeyi unutmak, yanlış
 bilgiyi yayına almanın en kolay yoludur. Kopyalanmayanlar ve sebepleri:
 
-| Alan | Neden kopyalanmaz |
-| ---- | ----------------- |
-| `sku` | Benzersizdir; yönetici kendi girer |
-| Görseller | İki ürün aynı Storage dosyasını gösterirdi; birini silmek diğerini kırardı |
-| `is_demo` | Kopya elle üretilmiş gerçek bir kayıttır, örnek veri değil |
-| `is_featured` | Öne çıkarma bilinçli bir karardır, miras alınmaz |
+| Alan          | Neden kopyalanmaz                                                          |
+| ------------- | -------------------------------------------------------------------------- |
+| `sku`         | Benzersizdir; yönetici kendi girer                                         |
+| Görseller     | İki ürün aynı Storage dosyasını gösterirdi; birini silmek diğerini kırardı |
+| `is_demo`     | Kopya elle üretilmiş gerçek bir kayıttır, örnek veri değil                 |
+| `is_featured` | Öne çıkarma bilinçli bir karardır, miras alınmaz                           |
 
 Kopya için slug **çakışmayacak biçimde** üretilir (`ad-kopya`, `-2`, `-3`…) çünkü
 kullanıcı hiçbir form doldurmadığından düzeltebileceği bir alan yoktur. Normal
@@ -674,7 +674,7 @@ Faz 2'den kalan dört `as unknown as` (`lib/data/products.ts` ×3,
 `lib/data/taxonomy.ts` ×1) **sıfıra indirildi**. Bastırılmadı, sebebi ortadan
 kaldırıldı.
 
-**Kök sebep.** supabase-js seçim metnini *tip düzeyinde* ayrıştırır ve sonuç
+**Kök sebep.** supabase-js seçim metnini _tip düzeyinde_ ayrıştırır ve sonuç
 satırının tipini oradan üretir. Bu ayrıştırma yalnız metin bir **literal tip**
 olduğunda çalışır. `buildListSelect()` dönüş tipi `string` diye işaretlendiği
 için literallik kayboluyor, çıkarım çöküyor ve her çağrı yerinde elle yazılmış
@@ -717,3 +717,48 @@ tersi) **derleyici hata verir**. Cast'li hâlde bu sapma sessizce kaçardı ve
   düşürme `next/image` tarafında yapılır. Kaynak dosya 5 MB ile sınırlıdır.
 - **Denetim kaydı (audit log) yok.** Kimin neyi ne zaman değiştirdiği tutulmuyor.
   Tek yönetici varken maliyeti faydasından fazla; çok yönetici gerekirse eklenmeli.
+
+## 37. Hizmet paneli fotoğrafları şemada değil, kodda eşlenir
+
+`services` tablosunda görsel alanı **yoktur ve bu değişiklikte de eklenmedi**.
+Ana sayfadaki hizmet panellerinin fotoğrafı `icon_key` üzerinden bir kod
+eşlemesinden gelir (`lib/home/service-media.ts`), tıpkı simgenin
+`components/ui/icons.tsx` üzerinden gelmesi gibi.
+
+**Neden.** Şemaya `image_path` eklemek doğru NİHAİ çözümdür; ama o sütun bugün
+boş olurdu — işletmenin henüz kendi atölye fotoğrafı yok. Boş bir sütun +
+yönetim paneli alanı + depolama yolu eklemek, tek kazancı "ileride
+doldurulabilir" olan üç yeni bakım yüzeyi demekti. Fotoğraflar zaten
+**geçicidir** (`docs/varlik-lisanslari.md`); geçici bir içerik için kalıcı bir
+veri modeli açılmadı. Gerçek fotoğraflar geldiğinde sütun eklenip eşleme
+silinir — o değişiklik bu yapıdan bağımsızdır.
+
+**Bozulması zararsızdır.** Tanınmayan/boş `icon_key` `null` döner ve panel eski
+görünümüne (marka degradesi + büyük simge) düşer. Fotoğraf bir katmandır,
+hizmetin görünme koşulu değildir.
+
+**Kontrast fotoğrafa bırakılmadı.** Fotoğrafın üstündeki metnin okunurluğu
+"herhalde yeter" diye ayarlanmaz: sekiz dosya tek reçeteden geçirilirken iki
+tonlamanın beyaz ucu kapatıldı, böylece hiçbir dosyanın en parlak noktası
+bağıl parlaklık 0,56'yı geçmiyor. `ServicePanels` içindeki perde oranları bu
+ÖLÇÜLEN üst sınırdan türetildi (açık panel %15, kapalı %75, artı başlık ve
+açıklama bantları). Yeni bir fotoğraf eklenirken reçete uygulanmazsa bu sınır
+bozulur — reçetenin adımları lisans kaydında yazılıdır.
+
+**Açık panelin perdesi mobilde %70'tir — yüzdeyle piksel aynı şey değil.**
+Okunabilirlik bantları panelin YÜZDESİYLE ölçülür (üstte 2/5, altta 3/5);
+metin bloğu ise PİKSELLE büyür. Masaüstünde panel 576px olduğu için açıklama
+alt çeyrekte, bandın opak ucunda oturur. Mobilde (375px) aynı panel 243px'e
+iner ve dört satırlık bir açıklama tek başına 112px tutar — yani iki bandın
+%40 çizgisinde birleştiği, ikisinin de saydam olduğu dikişin üstüne düşer.
+Ölçüm: perde %15'te gövde metninin kontrastı fotoğrafın en parlak noktasına
+karşı **1,52:1**'e kadar iniyordu (AA sınırı 4,5:1). Mobilde perde %70'e
+çıkarıldı; aynı en kötü nokta sekiz panelde **5,76–6,66:1** aralığına, başlık
+**11,66–12,60:1**'e döndü. Masaüstü değeri (`md:opacity-15`) değişmedi.
+
+Buradaki genel ders: **bir örtü yüzdeyle, üstündeki metin pikselle ölçülüyorsa
+kontrast panel yüksekliğinin fonksiyonudur.** Panel kısaldıkça metin bandın
+saydam ucuna kayar. 243px'lik bir panelde metnin kaplamadığı "orta" zaten
+yoktur — fotoğraf orada resim değil dokudur, perdenin yükselmesi bir kayıp
+değildir. Panel yüksekliği veya açıklama uzunluğu ileride değişirse bu ölçüm
+tekrarlanmalıdır.

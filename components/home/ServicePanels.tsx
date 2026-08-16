@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { getServiceIcon } from "@/components/ui/icons";
+import type { ServiceImage } from "@/lib/home/service-media";
 
 /*
   HİZMET PANELLERİ — yatayda genişleyen şerit.
@@ -11,13 +13,25 @@ import { getServiceIcon } from "@/components/ui/icons";
   örtü ve aktif/pasif içerik geçişi referans alındı. Veri, renkler, metinler
   ve ERİŞİLEBİLİRLİK tümüyle yeniden yazıldı.
 
-  GÖRSEL YOK — ŞEMADA DA YOK.
-  `services` tablosunda görsel alanı bulunmaz (bkz. migrasyon: name, slug,
-  short/long_description, icon_key…). Kaynak desendeki stok fotoğraflar
-  hotlink EDİLMEDİ ve uydurma görsel üretilmedi; panel zemini marka
-  degradesi + `icon_key`ten gelen büyük, dekoratif simgedir. Simge yalnız
-  dekordur (`aria-hidden`): hizmet adı her panelde METİN olarak durur
-  (bilgi dosyası §15 — simge tek gösterge olamaz).
+  ZEMİN: FOTOĞRAF VARSA FOTOĞRAF, YOKSA DEGRADE + SİMGE.
+  `services` tablosunda hâlâ görsel alanı yoktur; panel fotoğrafı `icon_key`
+  üzerinden bir KOD EŞLEMESİNDEN gelir (`lib/home/service-media.ts` — nedeni
+  ve yer tutucu statüsü orada yazılıdır). Eşleme bulunmayan hizmet eski
+  görünümünü korur: marka degradesi + büyük dekoratif simge. Yani fotoğraf
+  bir katmandır, hizmetin görünmesinin koşulu değildir.
+
+  Fotoğraflar DEKORATİFTİR (`alt=""`): hizmet adı ve açıklaması panelde METİN
+  olarak durur, görsel hiçbir bilgiyi tek başına taşımaz. Simge de öyle
+  (bilgi dosyası §14, §15 — simge/renk tek gösterge olamaz).
+
+  KONTRAST — fotoğrafın üstündeki metin nasıl okunur kalıyor:
+  metnin durduğu iki bant fotoğrafı neredeyse tamamen kapatır. Panelin
+  tamamına düz bir lacivert perde serilir (kapalı panelde daha koyu, böylece
+  açık panel öne çıkar), sonra ÜSTE başlık bandı, ALTA açıklama/CTA bandı için
+  iki degrade biner. Başlığın oturduğu en üst sırada perde ~%94, açıklamanın
+  oturduğu en alt sırada %100 opaktır; yani kontrast fotoğrafın o karesindeki
+  parlaklığa BIRAKILMAZ. Fotoğraflar ayrıca tek reçeteyle lacivert iki tonuna
+  çevrildiği için perdenin altındaki en parlak nokta bile sınırlıdır.
 
   ERİŞİLEBİLİRLİK SÖZLEŞMESİ:
     - Her panelin tıklama/odak hedefi GERÇEK bir `<button>`tır; paneli
@@ -39,6 +53,11 @@ export interface ServicePanelItem {
   description: string | null;
   /** `services.icon_key` — tanınmayan anahtar simgesiz render edilir. */
   iconKey: string | null;
+  /**
+   * Panel zemininin yerel fotoğrafı. `null` ise panel degrade + simge
+   * zemininde kalır — bu bir hata hâli değil, geçerli bir görünümdür.
+   */
+  image: ServiceImage | null;
   /**
    * Sunucuda üretilmiş WhatsApp CTA'sı. İstemci bileşeni içinde
    * oluşturulamaz: `WhatsAppButton` numarayı site ayarlarından okuyan
@@ -102,31 +121,127 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
               isActive ? "md:flex-[5]" : "md:flex-[1]",
             )}
           >
-            {/* Dekoratif zemin: marka degradesi + büyük hizmet simgesi. */}
+            {/* Dekoratif zemin: fotoğraf (varsa) ya da marka degradesi + simge. */}
             <div aria-hidden="true" className="absolute inset-0">
+              {/*
+                Degrade HER ZAMAN serilir: fotoğraf yüklenene kadar (ve hiç
+                yüklenmezse) panelin zemini boş beyaz bir dikdörtgen olmaz.
+              */}
               <div className="absolute inset-0 bg-linear-to-br from-surface-dark-raised to-surface-dark" />
 
-              {ServiceIcon && (
-                <ServiceIcon
+              {item.image ? (
+                /*
+                  `fill` + `object-cover`: panelin genişliği açık/kapalı
+                  durumuna göre değiştiği için görselin en-boy oranı sabit
+                  tutulamaz; kaynak dosyalar bu yüzden 3:4 dikey hazırlandı —
+                  dar şeritte de geniş panelde de kadraj ayakta kalır.
+
+                  `sizes` iki durumun ÜST SINIRINI söyler: masaüstünde açık
+                  panel şeridin ~%62'sidir, kapalı panel bunun çok altında
+                  kalır; tek değer verilmek zorunda olduğu için büyük olan
+                  yazılır (küçültmek kapalı panelde bulanıklık üretirdi).
+
+                  `priority` YOK: bölüm ilk ekranda değil, LCP adayı da değil.
+                */
+                <Image
+                  src={item.image.src}
+                  alt=""
+                  fill
+                  sizes="(min-width: 768px) 45vw, 100vw"
                   className={cn(
-                    "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-                    "text-accent-tech transition-all duration-(--duration-slow) ease-(--ease-emphasized)",
-                    isActive ? "size-40 opacity-15" : "size-24 opacity-10",
+                    "object-cover",
+                    "transition-transform duration-(--duration-slow) ease-(--ease-emphasized)",
+                    // Kapalı panelde hafif yakınlaşma: açılırken kadraj
+                    // geri çekilir, şerit "nefes alır".
+                    isActive ? "scale-100" : "scale-110",
+                  )}
+                />
+              ) : (
+                ServiceIcon && (
+                  <ServiceIcon
+                    className={cn(
+                      "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+                      "text-accent-tech transition-all duration-(--duration-slow) ease-(--ease-emphasized)",
+                      isActive ? "size-40 opacity-15" : "size-24 opacity-10",
+                    )}
+                  />
+                )
+              )}
+
+              {item.image ? (
+                /*
+                  FOTOĞRAFLI PANELİN ÜÇ KATMANI. Değerler keyfî değil,
+                  ölçülmüş bir üst sınırdan türetildi: iki tonlamanın beyaz
+                  ucu kapatıldığı için hiçbir fotoğrafın en parlak noktası
+                  bağıl parlaklık 0,56'yı geçmiyor (reçete:
+                  `docs/varlik-lisanslari.md`). Aşağıdaki perde oranları o
+                  değere göre seçildi; metnin kontrastı fotoğrafın hangi
+                  karesine denk geldiğine BIRAKILMIYOR.
+                */
+                <>
+                  {/*
+                    1. DÜZ PERDE. Kapalı panelde %75: dikey ad üstünde beyaz
+                    metin ≈5,2:1 kalır ve okunan panel şeritte kendiliğinden
+                    öne çıkar. Açık panelde %15 — fotoğraf orada görünsün diye.
+
+                    Bu bir "renkle anlatma" değildir: hangi panelin açık
+                    olduğu ayrıca metinle (açıklama + CTA) ve `aria-expanded`
+                    ile bellidir.
+
+                    AÇIK PANELDE MOBİL %70, MASAÜSTÜ %15 — NEDEN İKİ DEĞER:
+                    aşağıdaki iki bant panelin YÜZDESİYLE ölçülür (üstte 2/5,
+                    altta 3/5), metin bloğu ise PİKSELLE büyür. Masaüstünde
+                    panel 576px'tir: açıklama alt çeyrekte, bandın opak
+                    ucunda oturur (ölçülen ≈5,8:1). Mobilde aynı panel 243px'e
+                    iner ve açıklama tek başına 112px tutar — yani bandların
+                    %40 çizgisinde BİRLEŞTİĞİ, ikisinin de saydam olduğu
+                    dikişin tam üstüne düşer. Orada perde %15'ken fotoğrafın
+                    en parlak noktasına karşı ölçülen kontrast 1,52:1'e kadar
+                    düşüyordu (375px'te ölçüldü, AA sınırı 4,5:1).
+
+                    Mobilde çözüm bandları büyütmek değil: 243px'lik bir
+                    panelde metnin kaplamadığı "orta" zaten yoktur, fotoğraf
+                    orada resim değil DOKU'dur. Perde bu yüzden %70'e çıkar —
+                    aynı en parlak nokta ≈5,8:1'e döner. Masaüstü ölçüsüne
+                    dokunulmaz.
+                  */}
+                  <div
+                    className={cn(
+                      "absolute inset-0 bg-surface-dark",
+                      "transition-opacity duration-(--duration-slow) ease-(--ease-standard)",
+                      isActive ? "opacity-70 md:opacity-15" : "opacity-75",
+                    )}
+                  />
+
+                  {/*
+                    2. BAŞLIK BANDI. Başlık panelin ÜSTÜNDE durur; alttaki
+                    okunabilirlik degradesi oraya yetişmez. Üst kenarda %85 →
+                    açık panelde başlık ≈6,7:1.
+                  */}
+                  <div className="absolute inset-x-0 top-0 h-2/5 bg-linear-to-b from-surface-dark/85 via-surface-dark/40 to-transparent" />
+
+                  {/*
+                    3. AÇIKLAMA BANDI. Açıklama ve CTA panelin alt %25'inde
+                    durur; bant orada ≥%85 opaktır (gövde metni ≈5,8:1).
+                    Yüksekliği 3/5 ile sınırlı: panelin ortası fotoğrafa
+                    kalsın diye.
+                  */}
+                  <div className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-surface-dark via-surface-dark/85 to-transparent" />
+                </>
+              ) : (
+                /*
+                  Fotoğrafsız panelin tek örtüsü: metin degradenin en koyu
+                  ucunda durur. Aktif panelde daha güçlü — orada gerçek metin
+                  vardır.
+                */
+                <div
+                  className={cn(
+                    "absolute inset-0 bg-linear-to-t from-surface-dark via-surface-dark/55 to-transparent",
+                    "transition-opacity duration-(--duration-slow) ease-(--ease-standard)",
+                    isActive ? "opacity-95" : "opacity-70",
                   )}
                 />
               )}
-
-              {/*
-                Okunabilirlik örtüsü: metin degradenin en koyu ucunda durur.
-                Aktif panelde daha güçlü — orada gerçek metin vardır.
-              */}
-              <div
-                className={cn(
-                  "absolute inset-0 bg-linear-to-t from-surface-dark via-surface-dark/55 to-transparent",
-                  "transition-opacity duration-(--duration-slow) ease-(--ease-standard)",
-                  isActive ? "opacity-95" : "opacity-70",
-                )}
-              />
             </div>
 
             {/*
