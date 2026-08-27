@@ -106,6 +106,17 @@ Migrasyonlar (uygulanma sırası dosya adına göredir):
 | `..._foundation.sql`         | Enum'lar, `slugify()`, `updated_at`, yetki modeli  |
 | `..._catalog.sql`            | Katalog tabloları ve kısıtları                     |
 | `..._rls.sql`                | Row Level Security politikaları ve grant'ler       |
+| `..._storage.sql`            | `product-images` kovası ve dosya politikaları      |
+| `..._admin_role.sql`         | `admin_users.role` — ileriye dönük, yetki kararında kullanılmaz |
+
+Migrasyonların hepsi **tekrar çalıştırılabilir** (idempotent) yazılmıştır: aynı dosya
+ikinci kez uygulanırsa hata vermez, mevcut nesneyi atlar. Bunun doğrulaması, canlıya
+çıkmadan yapılabilecek en ucuz güvence:
+
+```bash
+# Yerel veriye DOKUNMADAN, gölge veritabanında sıfırdan uygular ve şema farkına bakar.
+supabase db diff --schema public   # beklenen çıktı: "No schema changes found"
+```
 
 Yeni migrasyon eklerken:
 
@@ -119,26 +130,49 @@ Tohum verisinin tamamı `status = 'draft'`'tır; RLS gereği anonim istemci **hi
 göremez**. Katalog arayüzünü gerçek veriyle denemek için:
 
 ```bash
+```bash
 # Görünür yap
-psql "$SUPABASE_DB_URL" -f supabase/dev_activate_demo.sql
+npm run db:demo:on
+
+# Yer tutucu görselleri Storage'a yükle (aşağıdaki nota bakınız)
+npm run db:demo:images
 
 # İşiniz bitince MUTLAKA geri al
-psql "$SUPABASE_DB_URL" -f supabase/dev_deactivate_demo.sql
+npm run db:demo:off
 ```
 
-`psql` kurulu değilse konteyner üzerinden:
+Bu üç komut `supabase/` altındaki betikleri çağırır; `psql` kurulu olmasa da
+çalışırlar (konteyner üzerinden giderler).
 
-```bash
-docker exec -i supabase_db_robotfix_son_durum psql -U postgres -d postgres \
-  < supabase/dev_activate_demo.sql
-```
+**Görsel adımı neden ayrı.** `seed.sql` demo ürünler için `product_images`
+satırları ekler ama Storage'a **dosya koymaz** — o satırların amacı veri
+katmanının görsel mantığını (ana görsel seçimi, `display_order`) gerçek
+satırlarla test edilebilir kılmaktı. Demo ürünler yayına alınınca bu yollar 404
+döner, `next/image` 400 verir ve kartlarda **siyah boş kutu** görünür.
+`db:demo:images` `supabase/demo-assets/` altındaki altı dosyayı yükleyerek bu
+boşluğu kapatır. Görseller ürün fotoğrafı değil, kadrajında `[ÖRNEK]` yazan
+şematik çizimlerdir: gerçek bir fotoğrafı taklit eden yer tutucu, demo olduğu
+unutulduğu anda sahte bir ürün görseline dönüşürdü.
 
-`dev_activate_demo.sql` **üretimde çalışmaz**: yerel yığın olup olmadığını ve
-veritabanında gerçek (demo olmayan) katalog satırı bulunup bulunmadığını denetler,
-ikisinden biri tutmazsa işlemi geri alır.
+`supabase db reset` Storage nesnelerini de siler; sıfırlamadan sonra
+`db:demo:images` yeniden çalıştırılır.
+
+`dev_activate_demo.sql` **üretimde çalışmaz**. İki bağımsız katmanı vardır:
+(1) yığının JWT sırrı Supabase CLI'nin bilinen yerel demo değeri mi,
+(2) `admin_users` içinde `.local` olmayan bir yönetici hesabı var mı — varsa
+burası gerçek bir kurulumdur ve reddedilir. Üçüncü sınır betiğin kendisindedir:
+her `update` satırı `where is_demo` ile sınırlıdır, demo olmayan bir satıra
+dokunamaz.
+
+> **Eski ölçüt neden değişti.** İkinci katman önceden "demo olmayan tek bir
+> katalog satırı varsa reddet" diyordu. Geliştirici panelden tek bir test ürünü
+> oluşturur oluşturmaz betik kendi geliştirme veritabanında da reddetmeye
+> başlıyordu — panel tam olarak ürün oluşturmak için varken. Ölçüt "veritabanı
+> dolu mu"dan "burası gerçek bir kurulum mu"ya çevrildi.
 
 > Demo satırlarını `active` bırakmayın. `npm run test:db` içindeki bir test bunu yakalar
-> ve kırılır — kasıtlıdır.
+> ve kırılır — kasıtlıdır. Veritabanı testlerini çalıştırmadan önce
+> `npm run db:demo:off` deyin.
 
 Demo veriyi tümüyle silmek için: `npm run db:seed:clear`
 
@@ -160,7 +194,7 @@ ile kod arasındaki uyumsuzluk `npm run typecheck` ile yakalanır.
 npm run dev
 ```
 
-Sonra `http://localhost:3000/veri-kontrol` adresini açın. Bu sayfa veri katmanının ne
+Sonra `http://localhost:3434/veri-kontrol` adresini açın. Bu sayfa veri katmanının ne
 döndürdüğünü döker: yapılandırma durumu, sorgu sonuçları, hata yolu ve ₺ glif kontrolü.
 Üretim navigasyonunda yer almaz ve indekslenmez.
 
@@ -215,6 +249,43 @@ açın. Burada iki tür değer vardır:
 Veritabanı bağlantı dizesini (`SUPABASE_DB_URL`) panelde **veritabanı bağlantısı**
 (*Database* / *Connect*) ile ilgili bölümde bulursunuz. Dizedeki parola alanı 2.1'de
 kaydettiğiniz parolayla doldurulur.
+
+### 2.2.1 Bağlantı havuzu (pooling) — neden gerekmiyor
+
+> Kısa cevap: **bu projede sunucusuz bağlantı havuzu ayarı yapılmaz ve
+> `SUPABASE_DB_URL` Vercel'e HİÇ girilmez.**
+
+Sunucusuz ortamlarda Postgres'in klasik sorunu şudur: her lambda örneği kendi
+bağlantısını açar, örnek sayısı arttıkça veritabanının bağlantı sınırı dolar. Çözüm
+genelde pgbouncer gibi bir havuzlayıcıdan (Supabase'de *transaction pooler*) geçmektir.
+
+**Bu proje o sorunun içine hiç girmez**, çünkü uygulama çalışma anında Postgres'e
+tel protokolüyle bağlanmaz:
+
+| Katman                         | Ne kullanır                                | Bağlantı türü        |
+| ------------------------------ | ------------------------------------------ | -------------------- |
+| Sayfalar, server action'lar    | `@supabase/supabase-js` + `@supabase/ssr`  | HTTPS → PostgREST    |
+| Migrasyonlar (`supabase db push`) | Supabase CLI                            | Doğrudan Postgres    |
+| Veritabanı testleri (`npm run test:db`) | `pg` (**devDependency**)          | Doğrudan Postgres, yalnız yerel |
+
+PostgREST tarafında bağlantı havuzunu Supabase kendi yönetir; bizim ayarlayacağımız
+bir şey yoktur. `pg` paketi `dependencies` içinde **değildir** — üretim paketine
+girmez. Doğrulaması:
+
+```bash
+node -e "console.log(!!require('./package.json').dependencies.pg)"   # false olmalı
+```
+
+**İleride doğrudan bir Postgres istemcisi eklenirse** (ör. drizzle, kendi `pg`
+havuzu) bu karar geçersiz olur ve şu ayrım zorunlu hâle gelir:
+
+| Amaç                                    | Supabase'de hangi bağlantı | Port   | Neden                                                                 |
+| --------------------------------------- | -------------------------- | ------ | --------------------------------------------------------------------- |
+| Sunucusuz çalışma anı sorguları         | Transaction pooler         | `6543` | Kısa ömürlü lambda'lar için tek doğru seçenek                          |
+| Migrasyon, DDL, `supabase db push`      | Doğrudan / session bağlantı| `5432` | Transaction pooler hazırlanmış ifadeleri ve oturum düzeyi özellikleri desteklemez |
+
+Yani havuzlanmış bağlantı üzerinden **migrasyon çalıştırılmaz**; `SUPABASE_DB_URL`
+bugün de yalnız migrasyon/test içindir ve doğrudan bağlantıyı gösterir.
 
 ### 2.3 Yerel projeyi uzak projeye bağla
 
@@ -280,15 +351,24 @@ select * from public.admin_users;
 
 Vercel proje ayarlarında ortam değişkeni olarak tanımlanır:
 
-| Değişken                        | Ortam                    |
-| ------------------------------- | ------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Production (+ Preview)   |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production (+ Preview)   |
-| `SUPABASE_SERVICE_ROLE_KEY`     | Production (+ Preview)   |
-| `NEXT_PUBLIC_SITE_URL`          | Production               |
+Vercel proje ayarlarında ortam değişkeni olarak tanımlananlar:
 
-`NEXT_PUBLIC_SHOW_DEMO_PRODUCTS` **üretimde tanımlanmaz**. Tanımlansa bile kod
-`NODE_ENV=production` altında yok sayar, ama tanımlamamak daha nettir.
+| Değişken                        | Ortam                    | Not                                          |
+| ------------------------------- | ------------------------ | -------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Production (+ Preview)   | Tarayıcıya gider                             |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production (+ Preview)   | Tarayıcıya gider; RLS ile sınırlı            |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Production (+ Preview)   | **Yalnız sunucu.** RLS'i atlar               |
+| `NEXT_PUBLIC_SITE_URL`          | Production               | Kanonik adres; sondaki `/` olmadan           |
+| `NEXT_PUBLIC_WHATSAPP_PHONE`    | —                        | İşletme numarası `site_settings`'ten okunur; env yalnız yedek |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | (isteğe bağlı)           | Boşsa analytics hiç yüklenmez                |
+
+**Tanımlanmayanlar — ve nedenleri:**
+
+| Değişken                       | Neden Vercel'de yok                                                        |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `SUPABASE_DB_URL`              | Çalışma anında doğrudan Postgres bağlantısı kurulmaz (bkz. 2.2.1). Girilirse gereksiz bir sır üretim ortamında durmuş olur. |
+| `NEXTAUTH_SECRET` vb.          | Oturum imzalama Supabase Auth'un işidir; kendi oturum kodumuz yok.          |
+| `NEXT_PUBLIC_SHOW_DEMO_PRODUCTS` | Üretimde **tanımlanmaz**. Tanımlansa bile kod `NODE_ENV=production` altında yok sayar, ama tanımlamamak daha nettir. |
 
 ### 2.7 Yayın öncesi kontrol listesi
 
@@ -299,6 +379,23 @@ Vercel proje ayarlarında ortam değişkeni olarak tanımlanır:
 - [ ] `service_role` anahtarı yalnız sunucu tarafı ortam değişkeninde.
 - [ ] `site_settings` tablosunda gerçek işletme bilgisi girildi (WhatsApp numarası,
       adres, çalışma saatleri). Girilmeyen alanlar arayüzde **gizlenir**, uydurulmaz.
+
+### 2.8 Şemanın bilerek kapsamadığı: kampanya / duyuru
+
+Panelden yönetilen alanların tamamı şemada karşılanır — ürün, fiyat, stok, görsel,
+marka, kategori, uyumlu model, seçki ve sırası, hizmet, ana sayfa bölümleri, WhatsApp
+numarası ve şablonları, SEO alanları, yayın durumu. **Tek istisna kampanya/duyurudur:**
+karşılığı olan bir tablo yoktur ve bu bilinçli bir tercihtir.
+
+Gerekçe: bir duyurunun ne olduğu (üst şerit yazısı mı, süreli indirim mi, ana sayfada
+bir bölüm mü) henüz kararlaştırılmadı. Karşılığı olmayan bir tablo açmak, arayüzde hiç
+okunmayan ölü şema üretirdi; bilgi dosyası §20 gereği içeriğini uydurmak da yasaktır.
+
+Karar verildiğinde eklenecek yol **zaten açıktır ve migrasyon gerektirmez**:
+`site_settings` anahtar-değer tablosuna satır eklenir (ör. `announcement_text`,
+`announcement_url`, `announcement_until`) ve `SITE_SETTING_KEYS` listesine yazılır —
+`homepage_sections` anahtarının bugün yaptığının aynısı. Yalnız süreli/çok kayıtlı bir
+kampanya modeli gerekirse ayrı tablo açmak anlamlı olur.
 
 ---
 
@@ -312,3 +409,27 @@ Vercel proje ayarlarında ortam değişkeni olarak tanımlanır:
 | `npm run test:db` "gerçek katalog satırı" diyor | Veritabanında demo olmayan veri var. Testler o veritabanında çalıştırılmaz.     |
 | RLS testi "demo satırı sızdırdı" diyor          | `dev_activate_demo.sql` çalıştırılmış ve geri alınmamış. 1.6'daki geri alma komutunu çalıştırın. |
 | Tip hataları şema değişikliğinden sonra          | `npm run db:types` çalıştırılmadı.                                              |
+| `TypeError: fetch failed` — `[site-settings]`, "Ürünler şu anda listelenemiyor", "Bu bölüm şu anda yüklenemedi" | **Üçü de tek nedendir:** yerel Supabase yığını kapalı (genelde Docker Desktop kapandığı için). Aşağıya bakınız. |
+
+### Yerel Supabase kapalıyken ne olur
+
+Veri okuyan her yüzey ayrı bir hata gösterir ama sebep tektir: `lib/supabase/public-client.ts`
+üzerinden giden istek bağlantı kuramaz ve geriye yalnız `TypeError: fetch failed` kalır.
+Sayfa istekleri de belirgin biçimde yavaşlar — bağlantı denemeleri istek süresine eklenir.
+
+`npm run dev` bunu artık kendisi yakalar: `predev` kancası
+[`scripts/dev-preflight.mjs`](../scripts/dev-preflight.mjs) çalışır, yığın kapalıysa
+durmuş kapsayıcıları **veriye dokunmadan** yeniden başlatır. Docker'ın kendisi
+kapalıysa dev sunucusu hiç başlamaz ve ne yapılacağını yazar.
+
+Kontrolü tek başına çalıştırmak:
+
+```bash
+npm run db:preflight
+```
+
+Veritabanı olmadan yalnız arayüz üzerinde çalışmak için (site verisiz açılır):
+
+```bash
+SKIP_DEV_PREFLIGHT=1 npm run dev
+```
