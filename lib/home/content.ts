@@ -28,25 +28,50 @@
 export const HERO_CONTENT = {
   /* Üst etikette marka adı YOKTUR — aşağıdaki büyütme kuralına bakınız. */
   overline: "Gaziantep · Robot süpürge teknik servisi ve yedek parça",
-  title: "Robot süpürgeniz için parça ve teknik servis",
+  title: "Arızayı anlayalım. Doğru parçayı seçelim.",
   body:
-    "Robot Fix; robot süpürgelerin bakımını, onarımını ve yedek parça tedarikini tek bir " +
-    "uzmanlık altında toplar. Cihazınızın markasını ve modelini iletin, uygun çözümü birlikte " +
-    "belirleyelim.",
-  primaryCtaLabel: "Ürünleri İncele",
+    "Robot süpürgeniz çalışmıyorsa marka, model ve arıza bilgisini iletin; parça " +
+    "arıyorsanız cihazınıza uygun seçenekleri inceleyin. Robot Fix, teknik servis ve yedek " +
+    "parça yönlendirmesini aynı uzmanlıkta buluşturur.",
+  guidance: "Modelinizi biliyorsanız ürünlere; arızadan emin değilseniz servis talebine ilerleyin.",
+  primaryCtaLabel: "Uyumlu Yedek Parçayı Bul",
   primaryCtaHref: "/urunler",
   /*
-    GÖRSEL YER TUTUCUDUR. Projede gerçek ürün/servis fotoğrafı yoktur ve
-    stok görsel hotlink edilmez. Dosyanın kendi içinde de gerekçe yazılıdır.
-    TODO(business): gerçek fotoğraf sağlandığında hem dosya hem bu alt metni
-    güncellenecek.
+    GÖRSELLER YER TUTUCUDUR. Projede gerçek ürün/servis fotoğrafı yoktur.
+    Unsplash'tan lisansları doğrulanarak YERELE alınmış ve WebP'ye çevrilmiştir;
+    her sayfa açılışında üçüncü taraf sunucuya istek atılmaz. Kaynak kayıtları
+    `docs/varlik-lisanslari.md` içindedir.
+
+    TODO(business): gerçek Robot Fix atölye ve ürün fotoğrafları sağlandığında
+    dosyalar ile alt metinler birlikte güncellenecek.
   */
-  image: {
-    src: "/gorseller/hero-ornek-gorsel.svg",
-    /* Alt metin görselin YER TUTUCU olduğunu da söyler — sessizce gerçekmiş gibi sunulmaz. */
-    alt: "[ÖRNEK] Robot süpürgenin üstten görünümünü anlatan çizim — gerçek ürün fotoğrafı yerine kullanılan yer tutucu",
-    width: 1200,
-    height: 750,
+  images: {
+    topLeft: {
+      src: "/gorseller/hero/elektronik-kart-onarimi.webp",
+      alt:
+        "[ÖRNEK] Elektronik kart üzerinde tornavida ile yapılan teknik çalışma — Robot Fix " +
+        "atölyesine ait olmayan stok görsel",
+      objectPosition: "center bottom",
+    },
+    topRight: {
+      src: "/gorseller/hero/robot-supurge-tekerlek.webp",
+      alt:
+        "[ÖRNEK] Eşik aşarken tekerlek mekanizması görünen robot süpürge — ürün ve " +
+        "servis anlatımı için kullanılan stok görsel",
+      objectPosition: "center center",
+    },
+    bottomLeft: {
+      src: "/gorseller/hero/robot-supurge-kullanim.webp",
+      alt: "[ÖRNEK] Ev ortamında çalışan robot süpürge — Robot Fix’e ait olmayan stok görsel",
+      objectPosition: "right bottom",
+    },
+    bottomRight: {
+      src: "/gorseller/hero/robot-supurge-temizlik.webp",
+      alt:
+        "[ÖRNEK] Zemindeki döküntüyü temizleyen robot süpürge — Robot Fix’e ait olmayan " +
+        "stok görsel",
+      objectPosition: "center center",
+    },
   },
 } as const;
 
@@ -86,7 +111,16 @@ export interface ValuePillar {
 }
 
 export const VALUE_PROPOSITION = {
-  overline: "Uzmanlık alanımız",
+  /*
+    ÜST ETİKET DEĞİŞTİ: eskiden "Uzmanlık alanımız" idi ve `hizmetler`
+    bölümünün yeni etiketi ("Uzmanlık alanlarımız") ile arasında iki harf
+    fark kalıyordu — aynı sayfada, iki bölüm arayla.
+
+    "Kapsamımız" hem çakışmayı kaldırır hem de bu bölümü daha doğru
+    adlandırır: aşağıdaki başlık ve üç sütun bir uzmanlık ALANI değil,
+    sunulanın KAPSAMINI (servis + parça + ürün) anlatır.
+  */
+  overline: "Kapsamımız",
   /* §2'deki marka vaadinin sırası korunarak teknik servis öne alındı. */
   title: "Teknik servis, parça ve ürün tek bir uzman noktada",
   /*
@@ -127,6 +161,57 @@ export const VALUE_PROPOSITION = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Uzmanlık alanları — hizmet şeridinin başlığı (bilgi dosyası §5, §13 · 6)
+// ---------------------------------------------------------------------------
+/*
+  BU BLOK YALNIZ BÖLÜMÜN ÇERÇEVESİDİR. Hizmetlerin kendi adı ve açıklaması
+  `services` tablosundan gelir ve buraya KOPYALANMAZ — hizmet kapsamı
+  işletmenin yönettiği veridir (`ServicesSection` başındaki nota bakınız).
+
+  ---------------------------------------------------------------------------
+  ÜÇ KOMŞU BÖLÜM, ÜÇ AYRI CÜMLE
+  ---------------------------------------------------------------------------
+  Sayfada `hizmetler → servis-vitrini → hakkinda` arka arkaya gelir ve üçü de
+  teknik servisi anlatır. Metinleri ayrılmazsa okuyucu aynı şeyi üç kez okumuş
+  hisseder. Bu yüzden her birine AYRI BİR SORU verildi:
+
+    hizmetler      → HANGİ konularda çalışıyoruz   (liste; bu blok)
+    servis-vitrini → NASIL bakıyoruz               (cihazın bütünü)
+    hakkinda       → NE sunuyoruz                  (servis + parça + ürün)
+
+  Daha önce üçünün üst etiketi de "teknik servis"/"uzman" çevresinde
+  dönüyordu ("Teknik servis", "Teknik servis uzmanlığı", "Uzmanlık alanımız").
+  Ayrım artık `__tests__/home-content.test.ts` içinde ayrıca korunuyor.
+
+  ÜST ETİKETTE MARKA ADI YOKTUR — Türkçe büyütme tuzağı ("Fix" → "FİX"),
+  gerekçesi aynı testte yazılıdır.
+*/
+export const SERVICES_SECTION = {
+  overline: "Uzmanlık alanlarımız",
+  /*
+    "Hangi konularda çalışıyoruz" — bir YETKİ ya da KAPSAM İDDİASI değil,
+    aşağıdaki listenin ne olduğunu söyleyen düz bir giriş. §20 gereği burada
+    sayı, süre, oran ya da "yetkili servis" iması geçmez.
+  */
+  title: "Robot süpürgede hangi konularda çalışıyoruz",
+  /*
+    Son cümle bölümün ÖNCEKİ metninden korundu: "hangi işlem gerektiğinden
+    emin değilseniz arızayı yazın." Bölümün en işe yarar cümlesiydi, yeniden
+    yazma uğruna atılmadı.
+  */
+  /*
+    İLK CÜMLEDE "parça" SÖZCÜĞÜ BİLİNÇLİ OLARAK YOK. Bir alttaki bölümün
+    başlığı "Parça değil, cihazın bütünü" — burada "ayrı bir parça grubu"
+    deyip hemen ardından "parça değil" demek, hızlı taramada çelişki gibi
+    okunuyordu. İki bölüm aynı sözcüğü zıt anlamda kullanmaz.
+  */
+  description:
+    "Her başlık cihazın ayrı bir bölümü ve ayrı bir inceleme demek. " +
+    "İlgilendiğiniz alanı açıp ne yaptığımızı okuyabilirsiniz. Cihazınızda " +
+    "hangisinin gerektiğinden emin değilseniz doğrudan arızayı yazın.",
+} as const;
+
+// ---------------------------------------------------------------------------
 // Servis vitrini (bilgi dosyası §2, §14, §22 · 1)
 // ---------------------------------------------------------------------------
 /*
@@ -139,13 +224,30 @@ export const VALUE_PROPOSITION = {
   GÖRÜNTÜ YER TUTUCUDUR. Projede gerçek Robot Fix atölye çekimi yoktur; yerine
   ticari kullanıma açık, atıf gerektirmeyen bir stok görüntü YERELE indirildi
   (kaynak ve lisans: `docs/varlik-lisanslari.md`). Görüntü bir mekânı ya da
-  ekibi TEMSİL ETMEZ; teknik işin yakın planıdır ve alt metninde yer tutucu
-  olduğu açıkça yazar — hero görselinde kurulan sözleşmenin aynısı.
+  ekibi TEMSİL ETMEZ; cihazın kendisinin yakın planıdır ve alt metninde yer
+  tutucu olduğu açıkça yazar — hero görselinde kurulan sözleşmenin aynısı.
+
+  Kadrajda hiçbir marka adı ya da amblemi OKUNMAZ: klibin üreticiyi gösteren
+  saniyeleri dışarıda bırakıldı (gerekçe §20 — marka ortaklığı görsel yoluyla
+  da ima edilemez). Renk reçetesi hizmet panelleriyle aynıdır, o yüzden bölüm
+  sayfanın geri kalanından kopmaz.
 */
 export const SERVICE_SHOWCASE = {
   /* Üst etikette marka adı YOKTUR — Türkçe büyütme tuzağı, yukarıdaki nota bakınız. */
-  overline: "Teknik servis uzmanlığı",
-  title: "Uzman ellerde teknik servis",
+  /*
+    ÜST ETİKET VE BAŞLIK YENİDEN YAZILDI (gövde değişmedi).
+
+    Eskisi "Teknik servis uzmanlığı" / "Uzman ellerde teknik servis" idi.
+    Hemen üstteki `hizmetler` bölümü de "Teknik servis" diyordu, hemen
+    alttaki `hakkinda` da "Uzmanlık alanımız" — üç ardışık bölüm aynı iki
+    kelimeyi paylaşıyordu ve sayfada tekrar hissi üretiyordu.
+
+    Yeni başlık bölümün KENDİ gövdesinin zaten söylediği şeydir: "parça
+    dizilen bir raf olarak değil, açılıp incelenen bir bütün olarak". Yani
+    yeni bir iddia eklenmedi, var olan cümle başlığa çıkarıldı (§20).
+  */
+  overline: "Servise bakışımız",
+  title: "Parça değil, cihazın bütünü",
   body:
     "Robot süpürge; motoru, fırça sistemi, sensörleri ve şarj elektroniği birlikte " +
     "çalışan bir cihazdır. Robot Fix bu cihaza parça dizilen bir raf olarak değil, " +
@@ -162,8 +264,9 @@ export const SERVICE_SHOWCASE = {
       src: "/gorseller/servis-vitrini-poster.jpg",
       /* Alt metin görüntünün YER TUTUCU olduğunu da söyler — gerçekmiş gibi sunulmaz. */
       alt:
-        "[ÖRNEK] Bir cihazın metal alt kapağındaki vidaların tornavidayla sökülüşünü " +
-        "gösteren yakın plan — gerçek Robot Fix atölye çekimi yerine kullanılan geçici görüntü",
+        "[ÖRNEK] Bir robot süpürgenin gövde kenarı, tampon şeridi ve toz haznesi " +
+        "kapağını gösteren yakın plan — gerçek Robot Fix atölye çekimi yerine " +
+        "kullanılan geçici görüntü",
       width: 1280,
       height: 720,
     },

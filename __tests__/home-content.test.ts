@@ -10,6 +10,7 @@ import {
   MARKETPLACE_CONTENT,
   SERVICE_PROCESS,
   SERVICE_SHOWCASE,
+  SERVICES_SECTION,
   VALUE_PROPOSITION,
 } from "@/lib/home/content";
 import { HOMEPAGE_SECTION_META } from "@/lib/home/section-registry";
@@ -58,7 +59,7 @@ function stripComments(source: string): string {
 
 /** Ana sayfayı oluşturan dosyalar: sayfa + bölüm bileşenleri + metin kaynağı. */
 const HOMEPAGE_FILES = [
-  "app/page.tsx",
+  "app/(site)/page.tsx",
   "lib/home/content.ts",
   "lib/home/organization-jsonld.ts",
   ...collectFiles("components/home"),
@@ -211,6 +212,9 @@ describe("üst etiketlerde marka adı (Türkçe büyütme tuzağı)", () => {
       COMPATIBILITY_CONTENT.overline,
       SERVICE_PROCESS.overline,
       MARKETPLACE_CONTENT.overline,
+      // Bu ikisi listede EKSİKTİ; ana sayfada basılan her üst etiket buraya girer.
+      SERVICE_SHOWCASE.overline,
+      SERVICES_SECTION.overline,
     ];
 
     expect(overlines.filter((text) => BRAND.test(text))).toEqual([]);
@@ -306,13 +310,19 @@ describe("bölüm kaydı (HOMEPAGE_SECTION_META)", () => {
   /** Bilgi dosyası §13 akışına karşılık gelen sıra. */
   const EXPECTED_ORDER = [
     "giris",
+    /*
+      SERVİS, KATALOGDAN ÖNCE. §13'ün önerdiği akışta hizmetler 6. sıradaydı;
+      §13 sırayı "önerilen" diye sunar ve değişebileceğini kendisi söyler.
+      Sapmanın gerekçesi §2 / §22 · 1: teknik servis markanın çekirdeğidir.
+      İkisi bir arada taşınır — vitrin, hizmet listesinin uzmanlık iddiasını
+      taşıdığı için hemen ardından gelmek zorundadır.
+    */
+    "hizmetler",
+    "servis-vitrini",
     "hakkinda",
     "secki",
     "kategoriler",
     "markalar",
-    "hizmetler",
-    // §13'ün akışına eklenen bölüm; gerekçesi kayıt dosyasındaki notta.
-    "servis-vitrini",
     "uyumluluk",
     "surec",
     "pazaryerleri",
@@ -349,7 +359,7 @@ describe("bölüm kaydı (HOMEPAGE_SECTION_META)", () => {
   });
 
   it("sayfa kaydı dolaşır ve panel yapılandırmasıyla birleştirir", () => {
-    const page = readFileSync(join(root, "app/page.tsx"), "utf8");
+    const page = readFileSync(join(root, "app/(site)/page.tsx"), "utf8");
     // Sayfa bölümleri elle sıralamaz; birleştirme tek fonksiyondan geçer.
     expect(page).toContain("visibleHomeSections(HOMEPAGE_SECTIONS, sectionsConfig)");
     expect(page).toContain("getHomeSectionsConfig()");
@@ -473,13 +483,13 @@ describe("bağımlılık sınırı", () => {
 
 describe("açılış bölümü (hero)", () => {
   /*
-    Faz 6: yer tutucu hero, kaydırmaya bağlı kart sahnesiyle DEĞİŞTİ. Testin
+    Açılış dört görselli kaydırma koreografisiyle DEĞİŞTİ. Testin
     koruduğu şey sunum değil, SÖZLEŞMEDİR (bilgi dosyası §14 + CLAUDE.md):
     başlık, değer önerisi ve iki CTA hareketten bağımsız olarak DOM'da metin
     kalır; hareket kullanıcı tercihine saygı duyar.
   */
   const hero = readFileSync(join(root, "components/home/Hero.tsx"), "utf8");
-  const stage = readFileSync(join(root, "components/home/HeroScrollStage.tsx"), "utf8");
+  const stage = readFileSync(join(root, "components/ui/scroll-choreography.tsx"), "utf8");
 
   it("metin sözleşmesi tek kaynaktan gelir, bileşende yeniden yazılmaz", () => {
     expect(hero).toContain("HERO_CONTENT");
@@ -490,20 +500,20 @@ describe("açılış bölümü (hero)", () => {
   it("iki CTA da sunucu tarafında üretilir", () => {
     expect(hero).toContain("HERO_CONTENT.primaryCtaLabel");
     expect(hero).toContain("HERO_CONTENT.primaryCtaHref");
-    expect(hero).toContain("whatsappCtaLabels.productInfo");
+    expect(hero).toContain("whatsappCtaLabels.service");
     expect(HERO_CONTENT.primaryCtaHref).toBe("/urunler");
   });
 
   it("metin ve CTA'lar istemci bileşenine TAŞINMAZ", () => {
     /*
       Bu, JS'siz erişilebilirliğin kod düzeyindeki güvencesi: sahne yalnız
-      sunum yapar, metni `header`/`children` olarak DIŞARIDAN alır. Metin
+      sunum yapar, metni `intro` olarak DIŞARIDAN alır. Metin
       buraya yazılırsa sunucu HTML'i yine üretir ama sözleşme sessizce
       istemciye kayar.
     */
     expect(stage).toContain('"use client"');
     expect(stage).not.toContain("HERO_CONTENT");
-    expect(stage).not.toContain("Ürünleri İncele");
+    expect(stage).not.toContain("Uyumlu Yedek Parçayı Bul");
     expect(stage).not.toContain("WhatsAppButton");
   });
 
@@ -522,10 +532,14 @@ describe("açılış bölümü (hero)", () => {
     const css = readFileSync(join(root, "app/globals.css"), "utf8");
     const reducedBlock = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
 
-    expect(reducedBlock).toContain("[data-rf-scroll-motion]");
-    expect(reducedBlock).toMatch(/\[data-rf-scroll-motion\]\s*\{\s*transform:\s*none\s*!important/);
-    // Kuralın hedefi gerçekten hareket eden öğelere konmuş olmalı.
-    expect(stage.match(/data-rf-scroll-motion/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(reducedBlock).toContain("[data-rf-choreography]");
+    expect(reducedBlock).toContain('[data-rf-card="top-right"]');
+    expect(reducedBlock).toMatch(
+      /\[data-rf-choreography\]\s*\{[\s\S]*?height:\s*auto\s*!important/,
+    );
+    // Kuralın hedefleri gerçekten sahneye konmuş olmalı.
+    expect(stage).toContain("data-rf-choreography");
+    expect(stage.match(/data-rf-choreography-card/g)?.length).toBe(4);
   });
 
   it("hareket hesabı hidrasyondan sonra tümüyle bırakılır", () => {
@@ -575,17 +589,45 @@ describe("açılış bölümü (hero)", () => {
     expect(existsSync(join(root, "components/home/HeroPlaceholder.tsx"))).toBe(false);
   });
 
-  it("görsel yer tutucu olduğunu alt metninde açıkça söyler", () => {
+  it("görseller yer tutucu olduğunu alt metinlerinde açıkça söyler", () => {
     // Sessizce gerçek ürün fotoğrafıymış gibi sunulmaz.
-    expect(HERO_CONTENT.image.alt).toContain("[ÖRNEK]");
-    expect(HERO_CONTENT.image.alt.length).toBeGreaterThan(20);
+    for (const image of Object.values(HERO_CONTENT.images)) {
+      expect(image.alt).toContain("[ÖRNEK]");
+      expect(image.alt.length).toBeGreaterThan(20);
+    }
   });
 
   it("stok görsel hotlink edilmez", () => {
-    // Görsel projenin kendi varlığıdır; harici bir adresten çekilmez.
-    expect(HERO_CONTENT.image.src.startsWith("/")).toBe(true);
-    expect(existsSync(join(root, "public", HERO_CONTENT.image.src))).toBe(true);
+    // Görseller yerel varlıklardır; harici bir adresten çekilmez.
+    for (const image of Object.values(HERO_CONTENT.images)) {
+      expect(image.src.startsWith("/")).toBe(true);
+      expect(existsSync(join(root, "public", image.src))).toBe(true);
+    }
     expect(hero).not.toMatch(/unsplash|pexels|https?:\/\//i);
+    expect(stripComments(stage)).not.toMatch(/https?:\/\//i);
+  });
+
+  it("hero görselleri performans bütçesini ve lisans kaydını korur", () => {
+    const images = Object.values(HERO_CONTENT.images);
+    const totalBytes = images.reduce(
+      (sum, image) => sum + statSync(join(root, "public", image.src)).size,
+      0,
+    );
+    const licenseRecord = readFileSync(join(root, "docs/varlik-lisanslari.md"), "utf8");
+
+    expect(totalBytes).toBeLessThanOrEqual(400 * 1024);
+    expect(licenseRecord).toContain("Unsplash License");
+    for (const image of images) {
+      expect(licenseRecord).toContain(image.src.split("/").at(-1));
+    }
+  });
+
+  it("dört görsel next/image ile ve oran bozulmadan sunulur", () => {
+    expect(stage).toContain('from "next/image"');
+    expect(stage.match(/<Image/g)?.length).toBe(4);
+    expect(stage).toContain("scale: heroScale");
+    expect(stage).not.toContain("scaleX");
+    expect(stage).not.toContain("scaleY");
   });
 });
 
@@ -617,6 +659,55 @@ describe("servis vitrini", () => {
     expect(stage).toContain('"use client"');
     expect(stageCode).not.toContain("SERVICE_SHOWCASE");
     expect(stageCode).not.toContain("WhatsAppButton");
+  });
+
+  /*
+    ÜÇ KOMŞU BÖLÜM AYNI CÜMLEYİ KURMAZ.
+
+    Sayfada `hizmetler → servis-vitrini → hakkinda` arka arkaya gelir ve üçü
+    de teknik servisi anlatır. Üst etiket ve başlıkları ayrılmazsa okuyucu
+    aynı şeyi üç kez okumuş hisseder — bu, gözle bakınca fark edilmesi zor,
+    metin düzenlerken sessizce geri gelmesi kolay bir kusurdur.
+
+    Kural KELİME DÜZEYİNDEDİR, cümle düzeyinde değil: üç başlıkta birden
+    geçen ayırt edici bir sözcük olamaz. "Teknik servis" gibi ortak bir
+    terimin İKİ bölümde geçmesi serbesttir (marka o işi yapıyor); üçünde
+    birden geçmesi, bölümlerin ayrı bir şey söylemediği anlamına gelir.
+  */
+  it("hizmetler, servis vitrini ve değer önerisi aynı sözcüklerle açılmaz", () => {
+    const headings = {
+      hizmetler: `${SERVICES_SECTION.overline} ${SERVICES_SECTION.title}`,
+      "servis-vitrini": `${SERVICE_SHOWCASE.overline} ${SERVICE_SHOWCASE.title}`,
+      hakkinda: `${VALUE_PROPOSITION.overline} ${VALUE_PROPOSITION.title}`,
+    };
+
+    // "ve", "için" gibi bağlayıcılar ayırt edici değildir; 4 harften kısa atılır.
+    const distinctive = (text: string) =>
+      new Set(
+        text
+          .toLocaleLowerCase("tr-TR")
+          .split(/[^\p{L}]+/u)
+          .filter((word) => word.length >= 4),
+      );
+
+    const [a, b, c] = Object.values(headings).map(distinctive);
+    const inAllThree = [...a].filter((word) => b.has(word) && c.has(word));
+
+    expect(
+      inAllThree,
+      `Üç bölümün başlığında birden geçen sözcük(ler): ${inAllThree.join(", ")}. ` +
+        "Her bölüm ayrı bir soruya cevap vermeli (hangi konular / nasıl bakıyoruz / ne sunuyoruz).",
+    ).toEqual([]);
+  });
+
+  it("üst etiketler birbirinin aynısı değildir", () => {
+    const overlines = [
+      SERVICES_SECTION.overline,
+      SERVICE_SHOWCASE.overline,
+      VALUE_PROPOSITION.overline,
+    ].map((text) => text.toLocaleLowerCase("tr-TR"));
+
+    expect(new Set(overlines).size, "iki bölüm aynı üst etiketi taşıyamaz").toBe(overlines.length);
   });
 
   it("servis süreci metnini tekrar etmez — ayrı bir içerik parçasıdır", () => {

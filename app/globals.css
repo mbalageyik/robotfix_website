@@ -75,6 +75,36 @@
   --rf-status-warning: #b54708;
   --rf-status-danger: #b42318;
   --rf-status-neutral: var(--rf-steel-600); /* aynı kilitli değer, iki rol */
+
+  /*
+    DURUM RENKLERİNİN KOYU YÜZEY KARŞILIKLARI.
+
+    Yukarıdaki beş değer AÇIK zemin için seçilmiştir ve koyu zeminde
+    KULLANILAMAZ: Servis Laciverti (#123b5d) üstünde ölçülen oranlar
+    1,51–2,14:1 arasında kalıyor (AA sınırı 4,5:1). Rozetler koyu kartlarda
+    da görünüyor (seçki paneli), yani bu ölçülmüş bir AA ihlaliydi.
+
+    Değerler üç koyu yüzeyin EN AÇIK olanına (Servis Laciverti) göre seçildi;
+    diğer ikisinde oran zaten daha yüksek çıkar. Parantez içindeki sayı o
+    bağlayıcı orandır.
+  */
+  --rf-status-success-on-dark: #75e0a7; /* Servis Lac. 7.17:1 */
+  --rf-status-info-on-dark: #84caff; /* Servis Lac. 6.56:1 */
+  --rf-status-warning-on-dark: #fec84b; /* Servis Lac. 7.50:1 */
+  --rf-status-danger-on-dark: #fda29b; /* Servis Lac. 5.98:1 */
+  --rf-status-neutral-on-dark: var(--rf-mist-200); /* Servis Lac. 8.69:1 */
+
+  /*
+    Devre dışı metin — SUNKEN zemin dâhil doğrulanmış ton.
+
+    Önceki değer (`--rf-slate-500`, #64748b) yalnız beyaza karşı
+    doğrulanmıştı (4,76:1). Devre dışı metnin gerçekte en çok göründüğü yer
+    ise `--color-surface-sunken` (#d7e0e8) üstündeki "görsel yok" yer
+    tutucularıdır ve orada 3,56:1'e düşüyordu — ölçülmüş AA ihlali.
+    Bu ton üç zeminde de geçer: beyaz 6,20:1, Buz Beyazı 5,81:1,
+    Sis Grisi 4,64:1.
+  */
+  --rf-slate-550: #556274;
 }
 
 @theme {
@@ -91,7 +121,8 @@
   /* Metin */
   --color-text: var(--rf-navy-900); /* başlık + ana metin */
   --color-text-muted: var(--rf-slate-700); /* gövde + yardımcı metin */
-  --color-text-disabled: var(--rf-slate-500);
+  /* Sunken zeminde de AA geçen ton — gerekçe `--rf-slate-550` notunda. */
+  --color-text-disabled: var(--rf-slate-550);
   --color-text-inverse: var(--rf-white);
 
   /*
@@ -443,6 +474,25 @@
     --color-button-edge: var(--rf-edge-on-dark);
 
     /*
+      DURUM RENKLERİ KOYU SETE ÇEVRİLİR.
+
+      Bu blok eskiden durum rollerini hiç yeniden tanımlamıyordu, yani
+      `AvailabilityBadge` koyu kartta (seçki paneli) açık zemin için seçilmiş
+      koyu renkleri kullanıyor ve 1,82–2,09:1'de kalıyordu. Ölçülmüş bir
+      WCAG 1.4.3 ihlaliydi; kök neden token setinin koyu varyantının
+      unutulmuş olmasıydı, bileşen değil.
+
+      Bilgi dosyası §15 gereği durum YALNIZ renkle anlatılmadığı için
+      (rozet her zaman metin + simge taşır) bu bir okunabilirlik onarımıdır,
+      anlamın kendisi zaten metinde.
+    */
+    --color-success: var(--rf-status-success-on-dark);
+    --color-info: var(--rf-status-info-on-dark);
+    --color-warning: var(--rf-status-warning-on-dark);
+    --color-danger: var(--rf-status-danger-on-dark);
+    --color-neutral: var(--rf-status-neutral-on-dark);
+
+    /*
       YÜKSELTİ KOYU ZEMİNDE KAPANIR.
 
       e1/e2 Gece Laciverti tonundan üretilmiştir; aynı tonun üstüne
@@ -544,12 +594,78 @@
     `!important`, satır içi normal bildirimi geçersiz kılar.
 
     Bu kural JS'ten ÖNCE ve JS OLMADAN da çalışır — hidrasyon beklenmez,
-    tercihe ilk boyamadan itibaren uyulur. `HeroScrollStage` içindeki
+    tercihe ilk boyamadan itibaren uyulur. Kaydırmaya bağlı istemci sahnelerindeki
     `useReducedMotion` kontrolü bunun yerine geçmez, tamamlar: o da
     hidrasyondan sonra kare kare hesabı tümüyle bırakır.
   */
   [data-rf-scroll-motion] {
     transform: none !important;
+  }
+
+  /*
+    AÇILIŞ KOREOGRAFİSİ.
+
+    Hareketi yalnız dondurmak 300 ekranlık boş bir kaydırma alanı bırakır ve
+    dört görseli merkezde üst üste bindirirdi. Azaltılmış hareket tercihinde
+    bölüm tek ekrana iner; son/taşıyıcı görsel sabit arka plan, başlık ve CTA
+    ise onun önündeki okunur yüzey olarak kalır.
+  */
+  [data-rf-choreography] {
+    height: auto !important;
+    min-height: 100svh;
+  }
+
+  [data-rf-choreography-sticky] {
+    position: relative !important;
+    height: 100svh !important;
+    min-height: 100svh;
+  }
+
+  [data-rf-choreography-card]:not([data-rf-card="top-right"]) {
+    display: none !important;
+  }
+
+  [data-rf-card="top-right"] {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    translate: none !important;
+    transform: none !important;
+    border-radius: 0 !important;
+  }
+
+  [data-rf-choreography-intro] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /*
+    YIĞILAN KART SAHNESİ (Faz 9 — Robot Fix Seçkisi).
+
+    Yukarıdaki kural kartların ÖLÇEĞİNİ durdurur. Ama bu desende hareketin
+    ikinci yarısı ölçek değil KONUMDUR: kartlar `position: sticky` ile
+    yapışır ve kaydırdıkça üst üste biner. Ölçeği durdurup yapışmayı
+    bırakmak, tercihe yarım uymak olurdu.
+
+    Bu yüzden yığın burada tümüyle sökülür: katlar normal akışa döner ve
+    bölüm sıradan, dikey bir kart listesi olarak okunur. Alt boşluk da
+    kalkar — o boşluk yalnız son kartın yapışmasına alan açmak içindi.
+
+    JS'ten ÖNCE ve JS OLMADAN çalışır; `FeaturedStackStage` içindeki
+    `useMediaQuery` kontrolü bunun yerine geçmez, tamamlar (o da kare kare
+    hesabı bırakır).
+  */
+  [data-rf-stack] {
+    padding-bottom: 0 !important;
+  }
+
+  [data-rf-stack-layer] {
+    position: static !important;
+  }
+
+  [data-rf-stack-layer] + [data-rf-stack-layer] {
+    margin-top: 1rem;
   }
 
   /*

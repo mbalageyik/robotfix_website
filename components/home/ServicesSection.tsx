@@ -2,6 +2,7 @@ import { Section } from "@/components/layout/Section";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { ServicePanels, type ServicePanelItem } from "@/components/home/ServicePanels";
 import { getServiceImage } from "@/lib/home/service-media";
+import { SERVICES_SECTION } from "@/lib/home/content";
 import { WhatsAppButton } from "@/components/whatsapp/WhatsAppButton";
 import { whatsappCtaLabels } from "@/lib/site-config";
 import type { DataResult } from "@/lib/data/result";
@@ -63,11 +64,16 @@ export function ServicesSection({ result }: { result: DataResult<ServiceRow[]> }
 
   return (
     <Section id="hizmetler" labelledBy="hizmetler-baslik" width="wide">
+      {/*
+        Başlık metni `lib/home/content.ts` içindedir, burada SATIR İÇİ
+        YAZILMAZ: komşu bölümlerle (servis vitrini, değer önerisi) tekrar
+        etmediği orada tek yerden görülebilsin ve testle korunabilsin diye.
+      */}
       <SectionHeading
         id="hizmetler-baslik"
-        overline="Teknik servis"
-        title="Robot süpürgeler için servis hizmetleri"
-        description="Cihazınızda hangi işlem gerektiğinden emin değilseniz, arızayı yazmanız yeterli."
+        overline={SERVICES_SECTION.overline}
+        title={SERVICES_SECTION.title}
+        description={SERVICES_SECTION.description}
       />
 
       <ServicePanels items={items} />

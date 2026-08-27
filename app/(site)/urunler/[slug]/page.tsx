@@ -16,6 +16,7 @@ import { getProductBySlug, getRelatedProducts } from "@/lib/data/products";
 import { productImageUrl } from "@/lib/images";
 import { siteUrl, whatsappCtaLabels } from "@/lib/site-config";
 import type { Marketplace, ProductDetail } from "@/lib/data/types";
+import { jsonLdHtml } from "@/lib/seo/json-ld";
 
 /*
   ÜRÜN DETAY SAYFASI (bilgi dosyası §7).
@@ -60,7 +61,16 @@ export async function generateMetadata({
 
   if (!result.ok) {
     // Bulunamayan ürün için indekslenecek bir başlık üretmeyiz.
-    return { title: "Ürün bulunamadı", robots: { index: false, follow: true } };
+    if (result.error.kind === "not_found") {
+      return { title: "Ürün bulunamadı", robots: { index: false, follow: true } };
+    }
+
+    /*
+      Altyapı hatasında "bulunamadı" YAZILMAZ — sayfa gövdesi zaten 500'e
+      düşecek (aşağıya bakınız) ve ürünün yokluğuna dair kalıcı bir iddiada
+      bulunmayız.
+    */
+    return { title: "Ürün geçici olarak görüntülenemiyor" };
   }
 
   const product = result.data;
@@ -92,15 +102,26 @@ export default async function ProductDetailPage({ params }: PageProps<"/urunler/
   const result = await getProductBySlug(slug);
 
   /*
-    `not_found` → 404. Diğer hatalar (ör. veritabanı erişilemiyor) da 404'e
-    düşürülür ÇÜNKÜ sayfanın gösterecek içeriği yoktur; ancak sebebi sunucu
-    günlüğüne yazılır, sessizce kaybolmaz.
+    YALNIZ "gerçekten yok" 404 OLUR.
+
+    Eskiden veritabanı erişilemediğinde de `notFound()` çağrılıyordu. Gerekçesi
+    "gösterecek içerik yok" idi ama 404'ün anlamı bu değildir: 404 KALICI bir
+    hükümdür — "bu ürün mevcut değil". Geçici bir arızada bunu söylemek iki
+    ayrı zarar üretir:
+
+      · Kullanıcı, var olan ürünü kaldırılmış sanır ve geri dönmez.
+      · Arama motoru 404'ü kalıcı kabul eder; ürün sayfası indeksten düşer.
+        Bir dakikalık kesinti haftalarca süren görünürlük kaybına dönüşür.
+
+    Altyapı hatasının doğru karşılığı 5xx'tir: geçici olduğunu söyler, tarayıcı
+    da arama motoru da yeniden dener. Hatayı fırlatmak Next'in hata sınırını
+    (`app/(site)/error.tsx`) devreye sokar ve durum kodu 500 olur.
   */
   if (!result.ok) {
-    if (result.error.kind !== "not_found") {
-      console.error(`[urun-detay] ${slug} okunamadı: ${result.error.message}`);
-    }
-    notFound();
+    if (result.error.kind === "not_found") notFound();
+
+    console.error(`[urun-detay] ${slug} okunamadı: ${result.error.message}`);
+    throw new Error(`Ürün okunamadı (${result.error.kind}): ${slug}`);
   }
 
   const product = result.data;
@@ -128,16 +149,10 @@ export default async function ProductDetailPage({ params }: PageProps<"/urunler/
   ]);
 
   return (
-    <main className="flex-1">
+    <main id="icerik" tabIndex={-1} className="flex-1">
       {/* Yapılandırılmış veri yalnız yukarıdaki gerçek alanlardan üretilir. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(jsonLd)} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(breadcrumbJsonLd)} />
 
       <Container width="wide" className="pt-6">
         <Breadcrumbs

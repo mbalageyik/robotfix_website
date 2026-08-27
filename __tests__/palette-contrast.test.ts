@@ -212,3 +212,59 @@ describe("durum renkleri beyaz üstünde AA geçer", () => {
     expect(ratio(t["--rf-white"], t["--rf-whatsapp-900"])).toBeGreaterThanOrEqual(AA.text);
   });
 });
+
+/*
+  KOYU YÜZEY DURUM RENKLERİ.
+
+  Bu blok bir QA denetimi sonrası eklendi: `.rf-on-dark` kapsamı durum
+  rollerini yeniden tanımlamıyordu ve `AvailabilityBadge` koyu kartta
+  (ana sayfa seçki paneli) 1,82–2,09:1'de kalıyordu. Kök neden bileşen
+  değil, token setinin eksik koyu varyantıydı — bu yüzden bekçi de token
+  seviyesinde duruyor.
+
+  Bağlayıcı zemin ÜÇ koyu yüzeyin en AÇIK olanıdır (Servis Laciverti);
+  diğer ikisinde oran kendiliğinden daha yüksek çıkar.
+*/
+describe("durum renkleri KOYU yüzeylerde AA geçer", () => {
+  const darkSurfaces = ["--rf-navy-900", "--rf-navy-700", "--rf-cinematic-950"] as const;
+
+  it.each([
+    ["--rf-status-success-on-dark", "başarı"],
+    ["--rf-status-info-on-dark", "bilgi"],
+    ["--rf-status-warning-on-dark", "uyarı"],
+    ["--rf-status-danger-on-dark", "hata"],
+    ["--rf-status-neutral-on-dark", "nötr"],
+  ])("%s (%s) üç koyu yüzeyde de geçer", (token) => {
+    for (const surface of darkSurfaces) {
+      expect(
+        ratio(t[token], t[surface]),
+        `${token} → ${surface} AA sınırının altında`,
+      ).toBeGreaterThanOrEqual(AA.text);
+    }
+  });
+
+  it("açık zemin durum renkleri koyu zeminde KULLANILAMAZ — ayrımın sebebi budur", () => {
+    // Bu test bir regresyon çıpasıdır: biri koyu varyantları silip açık
+    // olanlara geri dönerse burada patlar.
+    for (const token of ["--rf-status-success", "--rf-status-info", "--rf-status-danger"]) {
+      expect(ratio(t[token], t["--rf-navy-700"])).toBeLessThan(AA.text);
+    }
+  });
+});
+
+/*
+  DEVRE DIŞI METİN — sunken zemin dâhil.
+
+  Önceki ton yalnız beyaza karşı doğrulanmıştı; devre dışı metnin gerçekte en
+  çok göründüğü yer `--color-surface-sunken` üstündeki "görsel yok" yer
+  tutucularıdır ve orada AA'nın altına düşüyordu.
+*/
+describe("devre dışı metin üç açık zeminde de AA geçer", () => {
+  it.each([
+    ["--rf-white", "beyaz kart"],
+    ["--rf-ice-50", "Buz Beyazı sayfa zemini"],
+    ["--rf-mist-200", "Sis Grisi sunken zemin"],
+  ])("%s (%s)", (surface) => {
+    expect(ratio(t["--rf-slate-550"], t[surface])).toBeGreaterThanOrEqual(AA.text);
+  });
+});

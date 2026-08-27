@@ -48,10 +48,22 @@ export interface HomeSectionMeta {
 }
 
 /*
-  Sıra bilgi dosyası §13'teki içerik akışını izler. §13'ün 10. maddesindeki
+  Sıra bilgi dosyası §13'teki içerik akışını temel alır. §13'ün 10. maddesindeki
   "doğrulanmış müşteri kanıtları" bölümü BİLİNÇLİ OLARAK YOKTUR: doğrulanmış
   müşteri kanıtımız yok, uydurulamaz (§20). Yerinde yalnız işletmenin kendi
   girdiği adres ve çalışma saati durur (`guven`).
+
+  SERVİS ÖNE ALINDI — §13'ün önerdiği sıradan bilinçli bir sapma. §13 akışı
+  "önerilen" olarak sunar ve kendi son cümlesinde "içerik sırası tasarım ve
+  kullanıcı araştırmasına göre değişebilir" der; bu sapma o cümlenin altında
+  durur. Gerekçe §2 ve §22 · 1: teknik servis markanın ÇEKİRDEĞİDİR, katalog
+  onun etrafında durur. Servisi kataloğun (seçki, kategoriler, markalar)
+  arkasına koymak sayfayı bir parça dükkânı gibi açıyordu.
+
+  İKİ BÖLÜM BİRLİKTE TAŞINDI. `servis-vitrini`, `hizmetler`in hemen ardından
+  gelmek üzere tasarlanmıştır (aşağıdaki nota bakınız): hizmet listesinin
+  arkasındaki uzmanlık iddiasını taşır. Yalnız `hizmetler` yukarı alınsaydı bu
+  komşuluk sessizce kopardı — sıra değişikliği ikisini bir arada tutar.
 
   SIRA PANELDEN DEĞİŞTİRİLEMEZ ve bu bilinçlidir: sıra bir içerik akışı
   kararıdır (§13), bir tercih değil. Panel yalnız açıklığı ve onay durumunu
@@ -60,7 +72,30 @@ export interface HomeSectionMeta {
 export const HOMEPAGE_SECTION_META = [
   {
     id: "giris",
-    label: "Açılış — kaydırmaya bağlı kart",
+    label: "Açılış — görsel kaydırma koreografisi",
+    contentStatus: "live",
+    enabled: true,
+  },
+  {
+    id: "hizmetler",
+    label: "Teknik servis hizmetleri",
+    contentStatus: "live",
+    enabled: true,
+  },
+  /*
+    §13'ün akışına EKLENEN tek bölüm. Yeri seçimdir, boşluk doldurma değil:
+    hizmet listesinin HEMEN ARDINDAN gelir ve o listenin arkasındaki uzmanlık
+    iddiasını taşır (§2, §22 · 1). Bu komşuluk sıranın kendisi kadar önemlidir:
+    hizmet başlıkları "ne yapılıyor"u, vitrin "kim yapıyor"u söyler.
+
+    `contentStatus: "live"`: metin işletme onayı bekleyen bir operasyonel
+    anlatım değil, §2'deki onaylı konumlandırmanın karşılığıdır. Görüntünün
+    yer tutucu olması ONAY DURUMU DEĞİLDİR; o, alt metninde ve kod yorumunda
+    işaretlidir.
+  */
+  {
+    id: "servis-vitrini",
+    label: "Servis vitrini — teknik servis anlatımı",
     contentStatus: "live",
     enabled: true,
   },
@@ -85,30 +120,6 @@ export const HOMEPAGE_SECTION_META = [
   {
     id: "markalar",
     label: "Markalar",
-    contentStatus: "live",
-    enabled: true,
-  },
-  {
-    id: "hizmetler",
-    label: "Teknik servis hizmetleri",
-    contentStatus: "live",
-    enabled: true,
-  },
-  /*
-    §13'ün akışına EKLENEN tek bölüm. Yeri seçimdir, boşluk doldurma değil:
-    hizmet listesinin (6) hemen ardından gelir ve o listenin arkasındaki
-    uzmanlık iddiasını taşır (§2, §22 · 1). Uyumluluk anlatımından (7) ÖNCEDİR,
-    çünkü uyumluluk artık bir ürün/katalog konusudur — araya girmesi servis
-    temasını böler.
-
-    `contentStatus: "live"`: metin işletme onayı bekleyen bir operasyonel
-    anlatım değil, §2'deki onaylı konumlandırmanın karşılığıdır. Görüntünün
-    yer tutucu olması ONAY DURUMU DEĞİLDİR; o, alt metninde ve kod yorumunda
-    işaretlidir.
-  */
-  {
-    id: "servis-vitrini",
-    label: "Servis vitrini — teknik servis anlatımı",
     contentStatus: "live",
     enabled: true,
   },

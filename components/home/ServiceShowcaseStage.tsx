@@ -8,7 +8,7 @@ import { useSaveData } from "@/lib/hooks/use-save-data";
 /*
   SERVİS VİTRİNİ SAHNESİ — kaydırmaya duyarlı video çerçevesi.
 
-  Teknik yaklaşım `HeroScrollStage`ten devralındı (framer-motion `useScroll` +
+  Teknik yaklaşım açılışın önceki kaydırma sahnesinden devralındı (framer-motion `useScroll` +
   hidrasyon güvenli medya sorgusu); yeni bir desen icat edilmedi. Fark, sahnenin
   içinde bir <video> olması ve videonun KOŞULLU yüklenmesidir.
 

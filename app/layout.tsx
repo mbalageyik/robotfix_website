@@ -4,8 +4,18 @@ import "./globals.css";
 
 /*
   Tipografi — next/font ile SELF-HOST edilir (harici istek yok, gizlilik ve
-  performans için). Her ikisi de değişken (variable) fonttur: tek dosyada tüm
-  ağırlıklar, ayrı ayrı ağırlık indirmeye gerek yok.
+  performans için).
+
+  `weight` DİZİSİ VERİLMEZ VE BU BİLİNÇLİDİR. Üçü de Google Fonts'ta değişken
+  (variable) fonttur; ama `weight: ["600", "700"]` gibi bir dizi verildiği anda
+  next/font değişken dosyayı BIRAKIR ve her ağırlık için AYRI STATİK dosya
+  indirir. Bu notun önceki hâli "tek dosyada tüm ağırlıklar" diyordu — üretim
+  CSS'i ölçüldüğünde tersi çıktı: ayrık `font-weight: 400/500/600/700`
+  blokları ve toplam 6 dosya / 144 KB. `weight` kaldırılınca aile başına tek
+  değişken dosya iner ve tüm ağırlık aralığı onun içinden gelir.
+
+  Ağırlık aralığı KISITLANMAZ: tasarım 400–700 arasını kullanıyor ve değişken
+  font zaten sürekli bir eksen sunuyor.
 
   `latin-ext` alt kümesi Türkçe için ZORUNLUDUR: ğ Ğ ş Ş ı İ ç Ç ö Ö ü Ü
   karakterleri yalnız bu alt kümede bulunur.
@@ -20,7 +30,6 @@ const heading = Archivo({
   variable: "--font-heading",
   subsets: ["latin", "latin-ext"],
   display: "swap",
-  weight: ["600", "700"],
 });
 
 /** Gövde — açık apertür, Türkçe uzun kelimelerde okunur. */
@@ -28,7 +37,6 @@ const body = Manrope({
   variable: "--font-body",
   subsets: ["latin", "latin-ext"],
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 /** Teknik veri — ürün/stok kodunda I·l·1 ve 0·O ayrımı okunabilirlik değil doğruluk meselesi. */
@@ -36,7 +44,20 @@ const technical = JetBrains_Mono({
   variable: "--font-technical",
   subsets: ["latin", "latin-ext"],
   display: "swap",
-  weight: ["400", "500"],
+  /*
+    ÖN YÜKLEME KAPALI — tek font bu.
+
+    Teknik font yalnız ürün/stok kodu gibi kısa, KÜÇÜK metinlerde kullanılır
+    (`font-mono`: ürün kartı kodu, süreç adımı numarası, `<code>`). Hiçbir
+    LCP adayı bu ailede değil. `preload: true` ile `<head>`e giren iki dosya
+    (latin + latin-ext) ilk boyamayı bekleten yolda başlık ve gövde fontuyla
+    bant genişliği için yarışıyordu.
+
+    `false` fontu KALDIRMAZ: tarayıcı `font-mono` kullanan bir öğeye
+    rastladığında indirir. `display: "swap"` sayesinde o ana kadar yedek
+    monospace ile okunur kalır.
+  */
+  preload: false,
 });
 
 export const metadata: Metadata = {

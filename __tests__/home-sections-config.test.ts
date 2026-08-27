@@ -214,7 +214,7 @@ describe("panel ekranı", () => {
 
 describe("ana sayfa istemciye gizli bölüm göndermez", () => {
   it("karar sunucuda verilir", () => {
-    const page = readFileSync(join(root, "app/page.tsx"), "utf8");
+    const page = readFileSync(join(root, "app/(site)/page.tsx"), "utf8");
     // Filtre render'dan ÖNCE uygulanır; CSS ile gizleme yoktur.
     expect(page).toContain("visibleHomeSections(HOMEPAGE_SECTIONS, sectionsConfig)");
     expect(page).not.toContain("hidden");

@@ -10,11 +10,35 @@
 
 ## Kayıt
 
-| Dosya                                        | Tür   | Kaynak                                                                                   | Lisans                  | Atıf gerekir mi | Durum                   |
-| -------------------------------------------- | ----- | ---------------------------------------------------------------------------------------- | ----------------------- | --------------- | ----------------------- |
-| `public/gorseller/hero-ornek-gorsel.svg`     | SVG   | Proje varlığı (elle çizildi)                                                             | —                       | —               | Yer tutucu              |
-| `public/videos/servis-vitrini.mp4`           | Video | Pixabay — "Repair, Electronics, Fix, Screw, Metal" (video id 9062, yükleyen: `padrinan`) | Pixabay Content License | Hayır           | **Geçici / yer tutucu** |
-| `public/gorseller/servis-vitrini-poster.jpg` | JPEG  | Yukarıdaki videodan alınan tek kare                                                      | Pixabay Content License | Hayır           | **Geçici / yer tutucu** |
+| Dosya                                        | Tür   | Kaynak                                                                                       | Lisans         | Atıf gerekir mi | Durum                   |
+| -------------------------------------------- | ----- | -------------------------------------------------------------------------------------------- | -------------- | --------------- | ----------------------- |
+| `public/gorseller/hero-ornek-gorsel.svg`     | SVG   | Proje varlığı (elle çizildi)                                                                 | —              | —               | Yer tutucu              |
+| `public/videos/servis-vitrini.mp4`           | Video | Pexels — "A Robotic Vacuum Cleaner for Housekeeping" (video id 8566386, çeken: Kindel Media) | Pexels License | Hayır           | **Geçici / yer tutucu** |
+| `public/gorseller/servis-vitrini-poster.jpg` | JPEG  | Yukarıdaki videodan alınan tek kare                                                          | Pexels License | Hayır           | **Geçici / yer tutucu** |
+
+### Açılış koreografisi — `public/gorseller/hero/`
+
+Dört dosya da kaynak sayfasında “Free to use under the Unsplash License” olarak
+yayımlanmıştır. Kullanım yeri ana sayfanın açılış koreografisidir
+(`components/ui/scroll-choreography.tsx`). Görseller Robot Fix’in atölyesini,
+ekibini veya resmî marka ilişkisini temsil etmez; bu durum alt metinlerde
+`[ÖRNEK]` statüsüyle açıkça belirtilir.
+
+| Dosya                          | Kaynak (Unsplash id)                                                                               | Fotoğrafçı / hesap                        | Kadrajda ne var                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
+| `elektronik-kart-onarimi.webp` | [Circuit board being repaired with a screwdriver](https://unsplash.com/photos/HpoYaT9-9aE)         | Fotografia Lui Vlad (`fotografialuivlad`) | Elektronik kart ve teknik tornavida             |
+| `robot-supurge-kullanim.webp`  | [Robot vacuum cleans floor while family relaxes](https://unsplash.com/photos/u8EUjaYDrCA)          | Dreame Vacuum Cleaner (`dreametech`)      | Ev ortamında çalışan robot süpürge              |
+| `robot-supurge-temizlik.webp`  | [Robot vacuum cleaning spilled water and debris on floor](https://unsplash.com/photos/PPOKwxqWOY0) | Dreame Vacuum Cleaner (`dreametech`)      | Zemindeki döküntüyü temizleyen robot süpürge    |
+| `robot-supurge-tekerlek.webp`  | [A black robot vacuum cleaner on a light gray floor](https://unsplash.com/photos/3MtR6thHaek)      | Dreame Vacuum Cleaner (`dreametech`)      | Eşik aşarken tekerlek mekanizması görünen cihaz |
+
+**Projeye alınırken yapılan işlem.** Kaynaklar Unsplash görsel CDN’inden 1.800 px
+genişlikte, JPEG kalite 82 ile indirildi; ardından `cwebp` ile 1.600 px genişliğe
+ölçeklenip kalite 78–80 aralığında WebP’ye çevrildi. Dört dosyanın toplamı yaklaşık
+350 KB’tır. Sayfa uzak görsel adresine bağlanmaz; `next/image` yerel dosyaları uygun
+ekran boyutuna göre yeniden örnekler.
+
+**Değiştirilecek.** Gerçek Robot Fix atölye, cihaz ve parça fotoğrafları sağlandığında
+bu dört dosya ve `HERO_CONTENT.images` alt metinleri birlikte güncellenecektir.
 
 ### Hizmet paneli fotoğrafları — `public/gorseller/hizmetler/`
 
@@ -83,38 +107,72 @@ edilmelidir (gerekçe: `lib/home/service-media.ts`).
 
 ## `servis-vitrini.mp4` — ayrıntı
 
-**Sayfa:** <https://pixabay.com/videos/repair-electronics-fix-screw-metal-9062/>
-**İndirilen dosya:** `https://cdn.pixabay.com/video/2017/05/10/9062-217261104_large.mp4`
-(1920×1080, 40,5 sn, 22,8 MB)
+**Sayfa:** <https://www.pexels.com/video/a-robotic-vacuum-cleaner-for-housekeeping-8566386/>
+**İndirilen dosya:** `https://videos.pexels.com/video-files/8566386/8566386-hd_1920_1080_30fps.mp4`
+(1920×1080, 16,1 sn, 9,2 MB)
 
-**Lisans.** Pixabay Content License. Ticari kullanıma açıktır ve **atıf
-gerektirmez** ("You don't need to ask permission from or provide credit to the
-image author or Pixabay"). Bu kayıt yine de tutulur: kaynağı bilinmeyen bir
+**Lisans.** Pexels License. Ticari kullanıma açıktır, **atıf gerektirmez** ve
+değiştirilmeye izin verir. Bu kayıt yine de tutulur: kaynağı bilinmeyen bir
 varlık, lisansı uygun olsa bile denetlenemez.
 
-**Neden yerele indirildi.** Pixabay/Pexels gibi bir CDN'e hotlink verilseydi
-her sayfa açılışı üçüncü bir sunucunun ayakta ve adresin değişmemiş olmasına
-bağlı olurdu. Varlık projenin kendi `public/` klasöründedir.
+**Neden yerele indirildi.** Pexels CDN'ine hotlink verilseydi her sayfa açılışı
+üçüncü bir sunucunun ayakta ve adresin değişmemiş olmasına bağlı olurdu. Varlık
+projenin kendi `public/` klasöründedir.
+
+**Neden bu görüntü.** Önceki yer tutucu (Pixabay 9062) bir cihazın alt
+kapağındaki vidaların sökülüşüydü: tamir anlatıyordu ama **robot süpürge
+göstermiyordu**. Bu klip tersini yapıyor — sığ alan derinlikli bir makro çekimde
+cihazın gövde kenarı, tampon şeridi, gövde dikişi ve toz haznesi kapağı kadrajı
+dolduruyor. Bölüm metni cihaza "açılıp incelenen bir bütün" olarak baktığını
+söylüyor; kadraj da tam olarak o incelemenin mesafesinde duruyor.
+
+Ücretsiz stok arşivlerinde **robot süpürge tamiri** gösteren, ticari kullanıma
+açık bir çekim bulunamadı (Pexels ve Pixabay'de `robot vacuum repair`,
+`robot vacuum maintenance`, `vacuum cleaner repair`, `robot vacuum brush`
+sorguları tarandı; sonuçların tamamı cihazın normal çalışmasını gösteriyor).
+Bu yüzden ikisinden biri seçilmek zorundaydı: konusu tamir olan ama cihazı
+göstermeyen bir klip, ya da cihazı gösteren ama tamir göstermeyen bir klip.
+İkincisi seçildi — sayfanın anlattığı ürün grubunun ne olduğu, tamirin nasıl
+göründüğünden daha önemli.
+
+**Marka.** Kaynak klipteki cihaz tanınabilir bir modeldir; kadrajda **okunaklı
+marka adı ya da amblemi bırakılmadı**. Üretici amblemi klibin 12,0 – 14,0
+saniyeleri arasında üst plakada görünüyor; kırpma penceresi (0,9 – 9,2 sn) bu
+aralığın tamamını dışarıda bırakır. Gerekçe bilgi dosyası §20: yetkili servis
+statüsü ve marka ortaklığı uydurulamaz, görsel yoluyla da ima edilemez.
 
 **Projeye alınırken yapılan işlem** (macOS `avconvert` bit hızını
-ayarlatmadığı için `AVAssetReader`/`AVAssetWriter` ile elle kodlandı —
-`swiftc` betiği geçici çalışma klasöründeydi, projeye girmedi):
+ayarlatmadığı, `AVAssetExportSession` de preset dışında hedef bit hızı kabul
+etmediği için `AVAssetReader`/`AVAssetWriter` ile elle kodlandı — `swiftc`
+betiği geçici çalışma klasöründeydi, projeye girmedi):
 
-- 13,0 – 29,0 sn arası kırpıldı (16 sn)
-- 1920×1080 → 1280×720 ölçeklendi
-- H.264, ~1,1 Mbps ortalama bit hızı, `shouldOptimizeForNetworkUse` (fast-start)
-- Ses kanalı **tümüyle atıldı** — arka plan videosu zaten sessiz oynatılır
-- Sonuç: **2,2 MB** (`__tests__/home-content.test.ts` içinde 4 MB üst sınırı bekçisi var)
+- 0,9 – 9,2 sn arası kırpıldı (8,3 sn); pencere yukarıdaki marka kuralına ve
+  cihazın kadraja tam oturduğu aralığa göre seçildi
+- 1920×1080 → 1280×720 ölçeklendi (kadrajı dolduran ölçek, siyah bant yok)
+- **Hizmet panelleriyle aynı renk reçetesi**, tek bir `CIColorCubeWithColorSpace`
+  küpüne pişirilerek uygulandı: %1 kesmeli autocontrast → ortalama parlaklığı
+  116/255'e çeken gama (klibin kendi histogramından türetildi: `lo` 0,043,
+  `hi` 0,933, gama 1,23) → kontrast ×1,06 → siyah ucu `#0b1f33`, ortası
+  `#2f5a7d`, beyaz ucu `#c2d2df` olan iki tonlama → doygunluğu %30'a inmiş
+  orijinalin **%24** oranında geri karıştırılması. Küp sRGB çalışma uzayında
+  uygulanır; doğrusal uzayda tonlar kayardı.
+- H.264 (Main), ~1,1 Mbps ortalama bit hızı, `shouldOptimizeForNetworkUse`
+  (fast-start)
+- Ses izi **hiç eklenmedi** — arka plan videosu zaten sessiz oynatılır
+- Sonuç: **989 KB** (`__tests__/home-content.test.ts` içinde 4 MB üst sınırı
+  bekçisi var)
 
-Poster, kodlanmış klipten 13,0. saniyedeki kare alınarak üretildi
-(`AVAssetImageGenerator`, JPEG kalite ~0,72, 1280×720, 130 KB).
+Beyaz ucu panellerdeki `#a9bccd` yerine biraz daha açık olan `#c2d2df`, orijinal
+karışım oranı da %18 yerine %24 seçildi. Gerekçe teknik: panellerde metin
+fotoğrafın **üstünde** durduğu için parlaklığa ölçülebilir bir üst sınır
+gerekiyordu; burada metin videonun üstünde değil, yanındaki sütunda
+(`components/home/ServiceShowcaseSection.tsx`), o yüzden aynı tavan gerekmiyor
+ve klip filtre görüntüsüne dönüşmeden fotoğraf olarak kalabiliyor.
 
-**Neden bu görüntü.** Robot süpürge gösteren, ticari kullanıma açık ve atıf
-gerektirmeyen bir çekim bulunamadı. Seçilen klip bunun yerine **soyut kalır**:
-bir cihazın metal alt kapağındaki vidaların tornavidayla sökülüşünün yakın
-planıdır. Yüz, mekân, marka veya tanınabilir bir ürün göstermez — yani
-Robot Fix'in atölyesini ya da ekibini **temsil ettiği izlenimi vermez**.
-Gümüş-gri tonları "Güven veren teknoloji" paletiyle (§15) çakışmaz.
+Poster, **kodlanmış** klipten 3,4. saniyedeki kare alınarak üretildi
+(`AVAssetImageGenerator`, JPEG kalite ~0,72, 1280×720, 48 KB). Kaynaktan değil
+kodlanmış dosyadan alınır ki posterle videonun ilk karesi arasında renk ya da
+ölçek farkı olmasın.
 
 Görüntünün yer tutucu olduğu üç yerde işaretlidir: poster `alt` metninde
 (`[ÖRNEK] … gerçek Robot Fix atölye çekimi yerine kullanılan geçici görüntü`),
@@ -124,3 +182,21 @@ Görüntünün yer tutucu olduğu üç yerde işaretlidir: poster `alt` metninde
 **Değiştirilecek.** Gerçek Robot Fix atölye/servis çekimi sağlandığında bu iki
 dosya ve poster `alt` metni birlikte güncellenecek, bu satır kayıttan
 kaldırılacaktır.
+
+## Geçici logo — `components/layout/Logo.tsx`
+
+Sitenin logosu **henüz tasarlanmadı**. `Logo` bileşeni yer tutucudur ve dış bir
+kaynaktan gelmez: sembol elle yazılmış bir SVG'dir (üstten görünen robot
+süpürge — gövde dairesi, ön tampon yayı, lidar noktası), kelime işareti ise
+gerçek metindir, görsel değil.
+
+**Neden metin.** Ekran okuyucu adı doğrudan okur, arama motoru metni görür ve
+marka adının iki kelime yazılması kuralı (CLAUDE.md) görsele gömülmüş bir
+yazımla dolanılamaz. Bitişik yazım yalnız bir logo çiziminin İÇİNDE
+serbesttir; burada çizim yok.
+
+Bileşen `data-placeholder="gecici-logo"` özniteliği taşır — gerçek logo
+geldiğinde aranacak işaret budur. Dış lisans yoktur; proje varlığıdır.
+
+**Değiştirilecek.** Marka kimliği çalışması tamamlandığında bu bileşen ve bu
+kayıt birlikte güncellenir.

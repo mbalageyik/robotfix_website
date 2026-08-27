@@ -85,9 +85,16 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
           32rem → 36rem (Faz 7, +%12,5): teknik servis anlatımının sayfadaki
           görsel ağırlığını artırmak için (§22 · 1). Ölçü keyfî değil —
           32rem'de açık panelin açıklaması ve CTA'sı `mt-auto` ile alta
-          yaslandığında başlıkla arasında nefes kalmıyordu. 36rem, 900px'lik
-          bir dizüstü ekranında bölümü hâlâ tek bakışta bırakır; daha
-          yükseği başlığı ekran dışına iterdi.
+          yaslandığında başlıkla arasında nefes kalmıyordu.
+
+          BÖLÜM TEK EKRANA SIĞMAZ, sığması da hedef değildir. Bu yorumun
+          önceki hâli 36rem'in "900px'lik bir dizüstü ekranında bölümü tek
+          bakışta bıraktığını" söylüyordu; ölçüldüğünde tutmuyor: başlık
+          bloğu şeridin üstünde 359px yer kaplar, 359 + 576 = 935px zaten
+          900px'i aşar. Sığdırmak için şeridi ~240px'e indirmek gerekirdi —
+          o yükseklikte panel bir fotoğraf değil ince bir çubuk olurdu.
+          Doğru olan iddiayı düzeltmek: başlık okunur, şerit kaydırıldıkça
+          tam görünür.
         */
         "md:h-[36rem] md:flex-row md:gap-3",
       )}
@@ -245,6 +252,45 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
             </div>
 
             {/*
+              ============================================================
+              SEKME SIRASI: BUTON ÖNCE, İÇERİK SONRA.
+              ============================================================
+
+              Bu iki bloğun DOM sırası bir yerleşim tercihi DEĞİL, klavye
+              erişilebilirliğinin kendisidir.
+
+              Buton paneli açan kontroldür ve CTA yalnız panel AÇIKKEN
+              render edilir. İçerik butondan önce gelseydi sıra şöyle
+              işlerdi: Tab butona gelir → panel açılır → CTA belirir, ama
+              CTA artık odağın GERİSİNDE kaldığı için ileri Tab onu atlar
+              ve bir sonraki panele geçer. CTA'ya yalnız Shift+Tab ile
+              ulaşılırdı — yani sekiz hizmetin birincil WhatsApp
+              çağrısının tamamı klavye kullanıcısı için pratikte
+              erişilemez olurdu (WCAG 2.4.3, ölçülerek doğrulandı).
+
+              Buton önce durunca sıra doğal olur: buton → (panel açılır) →
+              CTA → sonraki panelin butonu.
+
+              GÖRSEL SIRA DEĞİŞMEZ: yığılma z-index ile açıkça yazılmıştır
+              (buton z-10, içerik z-20), DOM sırasına bırakılmamıştır.
+            */}
+            <button
+              type="button"
+              aria-expanded={isActive}
+              aria-controls={contentId}
+              onClick={() => setActiveId(item.id)}
+              onFocus={() => setActiveId(item.id)}
+              className="absolute inset-0 z-10 cursor-pointer"
+            >
+              {/*
+                Erişilebilir adı hizmet adıdır. Ad görsel olarak aşağıdaki
+                `<h3>`te durduğu için burada `sr-only` kopya kullanılır —
+                butonun adsız kalması ekran okuyucuda "boş buton" demektir.
+              */}
+              <span className="sr-only">{item.name}</span>
+            </button>
+
+            {/*
               AKIŞTAKİ İÇERİK — panelin yüksekliğini MOBİLDE bu belirler.
 
               Mutlak konumlandırılsaydı `<li>` boş kalır ve mobil akordeon
@@ -295,26 +341,6 @@ export function ServicePanels({ items }: { items: ServicePanelItem[] }) {
                 {isActive && <div className="pointer-events-auto">{item.cta}</div>}
               </div>
             </div>
-
-            {/*
-              Tıklama/odak hedefi: paneli kaplayan gerçek buton. İçeriğin
-              ALTINDA (z-10) durur; içerik `pointer-events-none` olduğu için
-              panelin her yerine yapılan tıklama buraya ulaşır.
-
-              Erişilebilir adı hizmet adıdır. Ad görsel olarak yukarıdaki
-              `<h3>`te durduğu için burada `sr-only` kopya kullanılır —
-              butonun adsız kalması ekran okuyucuda "boş buton" demektir.
-            */}
-            <button
-              type="button"
-              aria-expanded={isActive}
-              aria-controls={contentId}
-              onClick={() => setActiveId(item.id)}
-              onFocus={() => setActiveId(item.id)}
-              className="absolute inset-0 z-10 cursor-pointer"
-            >
-              <span className="sr-only">{item.name}</span>
-            </button>
           </li>
         );
       })}

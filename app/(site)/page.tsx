@@ -7,6 +7,7 @@ import { listBrands, listCategories, listServices } from "@/lib/data/taxonomy";
 import { buildOrganizationJsonLd } from "@/lib/home/organization-jsonld";
 import { visibleHomeSections } from "@/lib/home/section-registry";
 import { getSiteConfig, siteUrl } from "@/lib/site-config";
+import { jsonLdHtml } from "@/lib/seo/json-ld";
 
 /*
   ANA SAYFA (bilgi dosyası §13).
@@ -33,14 +34,14 @@ import { getSiteConfig, siteUrl } from "@/lib/site-config";
   marka ve hizmet bölümleri boş döner; bu beklenen durumdur ve sahte içerikle
   doldurulmaz.
 
-  İSTEMCİ JS: sayfadaki TEK istemci bileşeni açılış sahnesidir
-  (`components/home/HeroScrollStage.tsx`) ve yalnız kaydırmaya bağlı dönüşümü
-  yürütür. Metinlerin hiçbiri istemci paketine girmez; hepsi sunucuda üretilip
-  sahneye geçirilir. SSS'nin açılır davranışı `<details>` ile tarayıcıya aittir.
+  İSTEMCİ JS: kaydırmaya bağlı sunum katmanları istemci bileşenlerinde yaşar;
+  açılış için bu sınır `components/ui/scroll-choreography.tsx` dosyasıdır.
+  Başlık ve CTA'lar sunucuda üretilip sahneye geçirilir. SSS'nin açılır
+  davranışı `<details>` ile tarayıcıya aittir.
 
-  HERO: `giris` bölümü artık kaydırmaya bağlı kart sahnesidir
-  (`components/home/Hero.tsx`). Görsel HÂLÂ yer tutucudur — gerçek ürün
-  fotoğrafı işletmeden bekleniyor.
+  HERO: `giris` bölümü dört yerel robot süpürge/teknik servis stok görselini
+  tek bir sahnede birleştiren kaydırma koreografisidir (`components/home/Hero.tsx`).
+  Görseller HÂLÂ yer tutucudur — gerçek ürün ve atölye fotoğrafları bekleniyor.
 */
 
 /** Katalogla aynı tazelik penceresi: panelden yapılan değişiklik 5 dk içinde yansır. */
@@ -102,12 +103,9 @@ export default async function Home() {
   });
 
   return (
-    <main className="flex-1">
+    <main id="icerik" tabIndex={-1} className="flex-1">
       {/* Yapılandırılmış veri yalnız yukarıdaki gerçek alanlardan üretilir. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(organizationJsonLd)} />
 
       {visibleHomeSections(HOMEPAGE_SECTIONS, sectionsConfig).map((section) => (
         <Fragment key={section.id}>{section.render(data)}</Fragment>

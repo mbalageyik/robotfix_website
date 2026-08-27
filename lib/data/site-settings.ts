@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { getPublicClient } from "@/lib/supabase/public-client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { fail, ok, type DataResult } from "@/lib/data/result";
@@ -86,8 +88,15 @@ export async function getSiteSettings(): Promise<DataResult<SiteSettings>> {
  * ASLA HATA FIRLATMAZ ve `DataResult` DÖNMEZ: çağıran taraf için "okunamadı"
  * ile "boş" arasında bir fark yoktur, ikisinde de kod içi varsayılanlar
  * geçerlidir. Bir ayar okuması yüzünden ana sayfa düşmemelidir.
+ *
+ * `cache()` ile SARILI — istek başına tek sorgu. Genel site başlığı
+ * (`components/layout/SiteHeader.tsx`) menüde yalnız GÖRÜNEN bölümlerin
+ * çapasını gösterebilmek için aynı yapılandırmayı okur; ana sayfa da kendi
+ * bölümlerini seçmek için okur. Sarılmadan önce ana sayfa render'ında bu
+ * sorgu ikiye çıkıyordu (performans denetiminde ölçüldü). Yerelde maliyeti
+ * düşüktü ama uzak Supabase gecikmesinde iki tur ödemek anlamsızdır.
  */
-export async function getHomeSectionsConfig(): Promise<HomeSectionsConfig> {
+export const getHomeSectionsConfig = cache(async (): Promise<HomeSectionsConfig> => {
   if (!isSupabaseConfigured) return EMPTY_HOME_SECTIONS_CONFIG;
 
   const { data, error } = await getPublicClient()
@@ -102,4 +111,4 @@ export async function getHomeSectionsConfig(): Promise<HomeSectionsConfig> {
   }
 
   return parseHomeSectionsConfig(data?.value ?? null);
-}
+});

@@ -49,7 +49,7 @@ export const whatsappPhone: string | null = (() => {
 export const isWhatsAppConfigured = whatsappPhone !== null;
 
 /** Sitenin kanonik adresi — metadata, canonical ve mutlak ürün URL'leri için. */
-export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3434";
 
 /**
  * WhatsApp CTA metinleri. Bilgi dosyası §15: buton metninde eylem AÇIKÇA

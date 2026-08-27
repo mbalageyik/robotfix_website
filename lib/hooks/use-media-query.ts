@@ -5,7 +5,7 @@ import { useCallback, useSyncExternalStore } from "react";
 /*
   Medya sorgusu okuyucusu — HİDRASYON GÜVENLİ.
 
-  Faz 6'da `HeroScrollStage` içinde yazıldı; Faz 7'de servis vitrini de aynı
+  Faz 6'da açılış sahnesi için yazıldı; Faz 7'de servis vitrini de aynı
   ihtiyacı duyunca buraya taşındı. Mantık DEĞİŞMEDİ, yalnız tek kaynağa alındı.
 
   NEDEN `useState` + `useEffect` DEĞİL:

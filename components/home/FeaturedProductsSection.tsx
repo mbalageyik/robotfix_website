@@ -1,4 +1,5 @@
-import { ProductCard } from "@/components/catalog/ProductCard";
+import { FeaturedProductPanel } from "@/components/home/FeaturedProductPanel";
+import { FeaturedStackStage } from "@/components/home/FeaturedStackStage";
 import { ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -79,17 +80,19 @@ export function FeaturedProductsSection({ result }: { result: DataResult<Product
             }
           />
         ) : (
-          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {result.data.map((product, index) => (
-              <li key={product.id} className="flex">
-                {/*
-                  İlk satırdaki kartlar LCP adayıdır; yalnız onlar `priority`
-                  alır. Geri kalanı tembel yüklenir.
-                */}
-                <ProductCard product={product} priority={index < 4} />
-              </li>
-            ))}
-          </ul>
+          <FeaturedStackStage
+            items={result.data.map((product) => ({
+              id: product.id,
+              /*
+                HİÇBİR KART ÖNCELİK ALMAZ. Buradaki eski not "yalnız ilk
+                satırdaki kartlar LCP adayıdır" diyordu; ölçüldüğünde bu
+                bölümün TAMAMININ katlanmanın altında olduğu görüldü. O
+                öncelik `<head>`e ikinci bir görsel preload'u koyup gerçek
+                LCP elemanı olan hero görseliyle yarışıyordu.
+              */
+              content: <FeaturedProductPanel product={product} />,
+            }))}
+          />
         )}
       </div>
     </Section>

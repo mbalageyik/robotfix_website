@@ -101,6 +101,31 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
+/*
+  Menü aç / kapat — dar ekran gezinme açıcısında.
+
+  İkisi de tek başına anlam taşımaz: açıcının erişilebilir adı yanındaki
+  metindir ("Menü"), simge yalnız onun görsel karşılığıdır.
+*/
+export function MenuIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h16" />
+    </Icon>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+    </Icon>
+  );
+}
+
 /** Harici bağlantı — pazaryeri butonlarında yeni sekme işareti. */
 export function ExternalLinkIcon(props: IconProps) {
   return (
@@ -271,6 +296,47 @@ export function PartsIcon(props: IconProps) {
       <path d="m12 3.5 7.5 4v9L12 20.5 4.5 16.5v-9L12 3.5Z" />
       <path d="M4.5 7.5 12 11.5l7.5-4" />
       <path d="M12 11.5v9" />
+    </Icon>
+  );
+}
+
+/*
+  Katalog görünüm değiştirici simgeleri (liste / 2 sütun / 4 sütun).
+
+  Üçü de aynı 24 birimlik kutuyu doldurur ki düğme sırasında optik ağırlıkları
+  eşit olsun. Simge tek gösterge DEĞİLDİR: düğmelerde `aria-label` her zaman
+  vardır, geniş ekranda ayrıca metin etiketi de görünür.
+*/
+
+/** Liste görünümü — satır satır. */
+export function ListIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 6.5h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17.5h16" />
+    </Icon>
+  );
+}
+
+/** İki sütunlu ızgara. */
+export function GridTwoIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="4.5" width="6.5" height="15" rx="1.25" />
+      <rect x="13.5" y="4.5" width="6.5" height="15" rx="1.25" />
+    </Icon>
+  );
+}
+
+/** Dört sütunlu ızgara — iki satır, iki sütun olarak çizilir. */
+export function GridFourIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="4.5" width="6.5" height="6.5" rx="1.25" />
+      <rect x="13.5" y="4.5" width="6.5" height="6.5" rx="1.25" />
+      <rect x="4" y="13" width="6.5" height="6.5" rx="1.25" />
+      <rect x="13.5" y="13" width="6.5" height="6.5" rx="1.25" />
     </Icon>
   );
 }

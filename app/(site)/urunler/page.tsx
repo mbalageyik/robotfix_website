@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/catalog/Breadcrumbs";
 import { CatalogFilters } from "@/components/catalog/CatalogFilters";
-import { ProductCard } from "@/components/catalog/ProductCard";
+import { ProductsLayoutToggle } from "@/components/catalog/ProductsLayoutToggle";
 import { Container } from "@/components/layout/Container";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -117,8 +117,21 @@ export default async function ProductsPage({ searchParams }: PageProps<"/urunler
 
   const filtersApplied = hasActiveFilters(query);
 
+  /*
+    "Son sayfanın ötesi" ile "hiç ürün yok" AYRI durumlardır.
+
+    Katalogda ürün varken boş bir sayfaya düşmek arıza değildir — yer imi,
+    arama motoru veya sayfa açıkken katalogdan ürün çıkarılması bunu üretir.
+    Bu durumda "katalog yayında değil" demek YANLIŞ bilgi olurdu; kullanıcıya
+    gerçekte kaç sayfa olduğunu söyleyip geri dönüş yolu veririz.
+  */
+  const pageBeyondEnd =
+    productsResult.ok &&
+    productsResult.data.total > 0 &&
+    query.page > productsResult.data.pageCount;
+
   return (
-    <main className="flex-1">
+    <main id="icerik" tabIndex={-1} className="flex-1">
       <Section surface="raised" spacing="tight" labelledBy="urunler-basligi">
         <Breadcrumbs items={[{ label: "Ana sayfa", href: "/" }, { label: "Ürünler" }]} />
         <h1 id="urunler-basligi" className="mt-3 text-h1">
@@ -143,6 +156,19 @@ export default async function ProductsPage({ searchParams }: PageProps<"/urunler
           <ErrorState
             title="Ürünler şu anda listelenemiyor"
             description="Katalog verisine ulaşılamadı. Lütfen sayfayı yenileyin; sorun sürerse bize WhatsApp'tan yazabilirsiniz."
+          />
+        ) : pageBeyondEnd ? (
+          <EmptyState
+            title="Bu sayfada ürün yok"
+            description={`Bu listede ${productsResult.data.total} ürün var ve ${productsResult.data.pageCount} sayfaya sığıyor. İstediğiniz ${query.page}. sayfa bu nedenle boş.`}
+            action={
+              <Link
+                href={buildCatalogHref({ ...query, page: 1 })}
+                className="text-body font-semibold text-link underline underline-offset-4 hover:text-link-hover"
+              >
+                İlk sayfaya dön
+              </Link>
+            }
           />
         ) : productsResult.data.items.length === 0 ? (
           filtersApplied ? (
@@ -176,14 +202,14 @@ export default async function ProductsPage({ searchParams }: PageProps<"/urunler
                 ` · sayfa ${productsResult.data.page}/${productsResult.data.pageCount}`}
             </p>
 
-            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {productsResult.data.items.map((product, index) => (
-                <li key={product.id} className="flex">
-                  {/* İlk satır LCP adayı; yalnız onlar öncelikli yüklenir. */}
-                  <ProductCard product={product} priority={index < 4} />
-                </li>
-              ))}
-            </ul>
+            {/*
+              Görünüm değiştirici İLERİCİ BİR GELİŞTİRMEDİR: liste sunucuda
+              render edilir, JS yüklenmese bile ürünler HTML'de tam olarak
+              bulunur. Veri akışı değişmedi — yukarıdaki `listProducts()`
+              sonucu doğrudan aşağı iniyor, yeni bir sorgu yok.
+              İlk satır LCP adayıdır; yalnız o kartlar öncelikli yüklenir.
+            */}
+            <ProductsLayoutToggle products={productsResult.data.items} priorityCount={4} />
 
             {productsResult.data.pageCount > 1 && (
               <nav

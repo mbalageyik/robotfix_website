@@ -66,8 +66,36 @@ function buildListSelect(filters: ProductFilters) {
   availability, is_featured, is_demo, display_order,
   brand:${brandEmbed} ( id, name, slug ),
   category:${categoryEmbed} ( id, name, slug ),
-  images:product_images ( storage_path, alt_text, is_primary )
+  images:product_images ( storage_path, alt_text, is_primary, display_order )
 ` as const;
+}
+
+/*
+  ARAMA TERİMİ POSTGREST DİLBİLGİSİNE GİRER — ham geçirilemez.
+
+  `.or()` metni `or=(name.ilike.X,sku.ilike.Y)` biçiminde serileşir. Orada
+  `,` koşulları, `(` `)` grupları ayırır; `%` ve `*` ise ilike jokeridir.
+  Terim kaçırılmadan konursa kullanıcının yazdığı bir karakter sorgunun
+  MANTIĞINI değiştirir. Gözlenen davranış (düzeltilmeden önce):
+
+    ?ara=)   → filtre etkisizleşiyor, TÜM ürünler dönüyordu
+    ?ara=(   → hiçbir ürün dönmüyordu
+    ?ara=*   → joker olarak yorumlanıp tüm katalogla eşleşiyordu
+
+  İki katmanlı çözüm:
+  1) Joker karakterler (`%`, `*`) ayıklanır. Arama kutusuna joker yazılması
+     beklenmez; yazılsa da "her şey" demek olmamalıdır.
+  2) Kalan terim ÇİFT TIRNAK içine alınır — tırnak içinde `,` `(` `)` `.`
+     düz metindir. Tırnağın kendisi ve ters bölü kaçırılır.
+
+  Terim yalnız jokerlerden ibaretse `null` döner ve filtre HİÇ uygulanmaz;
+  boş bir `%%` deseni ile tüm katalogu "arama sonucu" diye sunmayız.
+*/
+export function normalizeSearchTerm(search: string | undefined): string | null {
+  const cleaned = (search ?? "").replaceAll("%", "").replaceAll("*", "").trim();
+  if (!cleaned) return null;
+
+  return cleaned.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
 /** Filtresiz seçim (detay sorgusu ve elle seçilmiş ilgili ürünler için). */
@@ -88,11 +116,41 @@ interface RawListRow {
   display_order: number;
   brand: { id: string; name: string; slug: string } | null;
   category: { id: string; name: string; slug: string } | null;
-  images: { storage_path: string; alt_text: string; is_primary: boolean }[] | null;
+  images:
+    | { storage_path: string; alt_text: string; is_primary: boolean; display_order: number }[]
+    | null;
+}
+
+/*
+  KAPAK GÖRSELİ DETERMİNİSTİK SEÇİLİR.
+
+  Gömülü kaynak SIRASIZ döner — PostgREST gömmeye kendiliğinden bir ORDER BY
+  yazmaz. Eski kod `find(is_primary) ?? images[0]` diyordu; `images[0]` ise
+  Postgres'in o an ürettiği plana bağlıydı. İki ayrı sorun doğuruyordu:
+
+  1. Hiçbir satırda `is_primary` işaretli olmayabilir — tohumdaki
+     `ornek-lityum-batarya` tam olarak böyledir (iki görsel, ikisi de false).
+     O ürünün kapağı tamamen rastlantısaldı.
+  2. İşaret olsa bile küçük tablolarda kararlı görünen sıra, tablo büyüyünce
+     (farklı plan, paralel tarama) istekten isteğe değişebilir.
+
+  Sıra bu yüzden burada AÇIKÇA kurulur: önce işaretli ana görsel, sonra
+  `display_order`, eşitlik hâlinde `storage_path`. Son ölçüt bir "güzellik"
+  değil, beraberliği kıran DETERMİNİSTİK ayraçtır.
+*/
+function sortImages<T extends { is_primary: boolean; display_order: number; storage_path: string }>(
+  images: T[] | null,
+): T[] {
+  return [...(images ?? [])].sort(
+    (a, b) =>
+      Number(b.is_primary) - Number(a.is_primary) ||
+      a.display_order - b.display_order ||
+      a.storage_path.localeCompare(b.storage_path),
+  );
 }
 
 function toListItem(row: RawListRow): ProductListItem {
-  const primary = row.images?.find((image) => image.is_primary) ?? row.images?.[0] ?? null;
+  const primary = sortImages(row.images)[0] ?? null;
 
   return {
     id: row.id,
@@ -134,22 +192,7 @@ export async function listProducts(
   const perPage = Math.min(MAX_PER_PAGE, Math.max(1, pagination.perPage ?? DEFAULT_PER_PAGE));
   const from = (page - 1) * perPage;
 
-  let query = getPublicClient()
-    .from("products")
-    .select(buildListSelect(filters), { count: "exact" });
-
-  // Filtre yolları `!inner` gömme ile eşleşir (bkz. buildListSelect).
-  if (filters.brandSlug) query = query.eq("brands.slug", filters.brandSlug);
-  if (filters.categorySlug) query = query.eq("categories.slug", filters.categorySlug);
-  if (filters.featuredOnly) query = query.eq("is_featured", true);
-  if (filters.availability?.length) query = query.in("availability", filters.availability);
-  if (!showDemoContent) query = query.eq("is_demo", false);
-
-  if (filters.search?.trim()) {
-    const term = filters.search.trim().replaceAll("%", "").replaceAll(",", " ");
-    query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%`);
-  }
-
+  let compatibilityIds: string[] | null = null;
   if (filters.deviceModelId) {
     // Uyumluluk çoktan-çoğa: önce eşleşen ürün id'lerini topla.
     const compat = await getPublicClient()
@@ -160,12 +203,39 @@ export async function listProducts(
     if (compat.error) {
       return fail("query_failed", compat.error.message, compat.error.code);
     }
-    const ids = compat.data.map((row) => row.product_id);
-    if (ids.length === 0) {
+    compatibilityIds = compat.data.map((row) => row.product_id);
+    if (compatibilityIds.length === 0) {
       return ok({ items: [], total: 0, page, perPage, pageCount: 0 });
     }
-    query = query.in("id", ids);
   }
+
+  /*
+    Filtreler TEK yerden kurulur çünkü iki kez çalıştırılmaları gerekebilir:
+    bir kez satırlar için, bir kez de aralık dışı sayfada yalnız sayaç için
+    (aşağıdaki PGRST103 dalı). İki listenin elle senkron tutulması, birine
+    eklenen filtrenin diğerinde unutulmasıyla YANLIŞ bir toplam üretirdi.
+  */
+  const filtered = (head: boolean) => {
+    let query = getPublicClient()
+      .from("products")
+      .select(buildListSelect(filters), { count: "exact", head });
+
+    // Filtre yolları `!inner` gömme ile eşleşir (bkz. buildListSelect).
+    if (filters.brandSlug) query = query.eq("brands.slug", filters.brandSlug);
+    if (filters.categorySlug) query = query.eq("categories.slug", filters.categorySlug);
+    if (filters.featuredOnly) query = query.eq("is_featured", true);
+    if (filters.availability?.length) query = query.in("availability", filters.availability);
+    if (!showDemoContent) query = query.eq("is_demo", false);
+
+    const term = normalizeSearchTerm(filters.search);
+    if (term) query = query.or(`name.ilike."%${term}%",sku.ilike."%${term}%"`);
+
+    if (compatibilityIds) query = query.in("id", compatibilityIds);
+
+    return query;
+  };
+
+  let query = filtered(false);
 
   switch (sort) {
     case "name_asc":
@@ -188,7 +258,33 @@ export async function listProducts(
 
   const { data, error, count } = await query.range(from, from + perPage - 1);
 
-  if (error) return fail("query_failed", error.message, error.code);
+  if (error) {
+    /*
+      PGRST103 = "Requested range not satisfiable".
+
+      PostgREST, istenen OFFSET satır sayısını aşınca 416 döner. Bu bir ARIZA
+      DEĞİLDİR: kullanıcı son sayfanın ötesine gitmiştir. Kaynakları:
+      yer imi, arama motoru, ya da sayfa açıkken katalogdan ürün çıkarılması.
+
+      Eski kod bunu `query_failed` sayıyordu; katalog sayfası da "Ürünler şu
+      anda listelenemiyor" diyen ALARM ekranını basıyordu. 8 ürünlü katalogda
+      `?sayfa=2` yazmak yeterliydi — veritabanı gayet sağlıklıyken sayfa
+      bozuk görünüyordu.
+
+      Doğru cevap: boş bir sayfa, ama DOĞRU toplamla. Sayaç için ikinci bir
+      `head` sorgusu atılır (yalnız bu nadir dalda, satır taşımaz). Böylece
+      arayüz kaç sayfa olduğunu bilir ve kullanıcıyı geri yönlendirebilir.
+    */
+    if (error.code === "PGRST103") {
+      const { count: totalCount, error: countError } = await filtered(true);
+      if (countError) return fail("query_failed", countError.message, countError.code);
+
+      const total = totalCount ?? 0;
+      return ok({ items: [], total, page, perPage, pageCount: Math.ceil(total / perPage) });
+    }
+
+    return fail("query_failed", error.message, error.code);
+  }
 
   const total = count ?? 0;
   return ok({
