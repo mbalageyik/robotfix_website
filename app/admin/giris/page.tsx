@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui/Card";
 import { Container } from "@/components/layout/Container";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { ADMIN_ROBOTS } from "@/lib/admin/robots";
+import { AUTH_NOT_CONFIGURED_ERROR } from "@/lib/auth/messages";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const metadata: Metadata = {
   title: "Yönetici girişi",
@@ -37,12 +40,28 @@ export default async function AdminLoginPage({
         <p className="text-overline text-accent-tech">Robot Fix</p>
         <h1 className="mt-2 text-h2">Yönetim paneli</h1>
         <p className="mt-2 text-body text-text-muted">
-          Devam etmek için yönetici hesabınızla giriş yapın.
+          {isSupabaseConfigured
+            ? "Devam etmek için yönetici hesabınızla giriş yapın."
+            : "Giriş şu anda mümkün değil."}
         </p>
       </div>
 
       <Card>
-        <LoginForm continueTo={continueTo} />
+        {/*
+          YAPILANDIRMA EKSİKSE FORM HİÇ GÖSTERİLMEZ.
+
+          Form gösterilseydi her deneme başarısız olur ve kullanıcı bunu kendi
+          parolasının hatası sanardı. `requireAdminPage()` yapılandırma yokken
+          herkesi buraya yolladığı için sebep tek bir yerde, burada anlatılır.
+        */}
+        {isSupabaseConfigured ? (
+          <LoginForm continueTo={continueTo} />
+        ) : (
+          <ErrorState
+            title="Sunucu yapılandırması eksik"
+            description={AUTH_NOT_CONFIGURED_ERROR}
+          />
+        )}
       </Card>
     </Container>
   );

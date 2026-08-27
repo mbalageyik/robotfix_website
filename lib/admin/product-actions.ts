@@ -6,14 +6,24 @@ import { z } from "zod";
 import { requireAdminAction } from "@/lib/auth/dal";
 import { getServerClient } from "@/lib/supabase/server-client";
 import { resolveSlug } from "@/lib/admin/slug";
-import { productSchema, productSubResourcesSchema, publicationStatusSchema } from "@/lib/admin/schemas";
+import { revalidateProductSurfaces } from "@/lib/admin/revalidate";
+import {
+  productSchema,
+  productSubResourcesSchema,
+  publicationStatusSchema,
+} from "@/lib/admin/schemas";
+import {
+  parseCollectionField,
+  productFormValuesFromFormData,
+} from "@/lib/admin/product-form-input";
 import {
   actionError,
   actionSuccess,
-  fieldErrorsFromZod,
+  fieldErrorsFromZodIssues,
   messageFromPostgresError,
   type ActionState,
 } from "@/lib/admin/action-result";
+import type { ProductFormValues } from "@/components/admin/ProductForm";
 
 /*
   ÜRÜN YAZMA AKSİYONLARI.
@@ -28,15 +38,24 @@ import {
   Doğrulama sırası: yetki → şema → veritabanı. Üçü de bağımsız hattır.
 */
 
-/** Formdaki JSON alanlarını güvenle ayrıştırır. */
-function parseJsonField(formData: FormData, key: string): unknown {
-  const raw = formData.get(key);
-  if (typeof raw !== "string" || raw.trim() === "") return undefined;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null; // şema doğrulaması anlamlı hatayı üretecek
+/** Ürün formunun aksiyon sonucu — hata hâlinde gönderilen değerleri geri taşır. */
+export type ProductActionState = ActionState<ProductFormValues>;
+
+/**
+ * Benzersizlik ihlalini SORUMLU ALANA bağlar.
+ *
+ * Genel mesaj tek başına yetmez: uzun bir formda "bu kayıt zaten mevcut"
+ * cümlesi kullanıcıya hangi kutuyu değiştireceğini söylemez.
+ */
+function uniqueFieldErrors(error: { code?: string; message: string }): Record<string, string> {
+  if (error.code !== "23505") return {};
+  if (error.message.includes("slug")) {
+    return { slug: "Bu slug zaten kullanılıyor. Farklı bir slug yazın." };
   }
+  if (error.message.includes("sku")) {
+    return { sku: "Bu ürün kodu başka bir üründe kullanılıyor. Farklı bir kod girin." };
+  }
+  return {};
 }
 
 function readProductForm(formData: FormData) {
@@ -62,13 +81,42 @@ function readProductForm(formData: FormData) {
   });
 }
 
-function readSubResources(formData: FormData) {
-  return productSubResourcesSchema.safeParse({
-    specs: parseJsonField(formData, "specs") ?? [],
-    compatibleModelIds: parseJsonField(formData, "compatibleModelIds") ?? [],
-    marketplaceLinks: parseJsonField(formData, "marketplaceLinks") ?? [],
-    relatedProductIds: parseJsonField(formData, "relatedProductIds") ?? [],
-  });
+/**
+ * Alt koleksiyonları okur.
+ *
+ * Ayrıştırılamayan bir koleksiyon `null` döner ve BURADA yakalanır. Eskiden
+ * boş diziye düşüyordu; bu, kullanıcının tüm satırlarını sessizce silmek
+ * demekti — hata bile görünmüyordu.
+ */
+function readSubResources(
+  formData: FormData,
+):
+  | { ok: true; data: z.infer<typeof productSubResourcesSchema> }
+  | { ok: false; fieldErrors: Record<string, string> } {
+  const collections = {
+    specs: parseCollectionField(formData, "specs"),
+    compatibleModelIds: parseCollectionField(formData, "compatibleModelIds"),
+    marketplaceLinks: parseCollectionField(formData, "marketplaceLinks"),
+    relatedProductIds: parseCollectionField(formData, "relatedProductIds"),
+  };
+
+  const unreadable = Object.entries(collections).filter(([, value]) => value === null);
+  if (unreadable.length > 0) {
+    return {
+      ok: false,
+      fieldErrors: Object.fromEntries(
+        unreadable.map(([key]) => [
+          key,
+          "Bu bölümün içeriği okunamadı. Sayfayı yenileyip yeniden deneyin.",
+        ]),
+      ),
+    };
+  }
+
+  const parsed = productSubResourcesSchema.safeParse(collections);
+  if (!parsed.success)
+    return { ok: false, fieldErrors: fieldErrorsFromZodIssues(parsed.error.issues) };
+  return { ok: true, data: parsed.data };
 }
 
 /** Alt tabloları "sil ve yeniden yaz" ile eşitler. */
@@ -169,32 +217,55 @@ async function syncSubResources(
 }
 
 export async function saveProductAction(
-  _prevState: ActionState,
+  _prevState: ProductActionState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<ProductActionState> {
+  /*
+    GÖNDERİLEN DEĞERLER İLK İŞTE OKUNUR ve her hatalı çıkışta geri gönderilir.
+
+    Sebebi: React `<form action={fn}>` gönderiminden sonra formu otomatik
+    sıfırlar. Doğrulama hatasında kullanıcının doldurduğu her alan silinirdi ve
+    uzun bir ürün formunu yeniden doldurmak, panelin en pahalı hatasıydı.
+    Doğrulama kuralları buna karşılık HİÇ gevşetilmedi — yalnız hata sonrası
+    kullanıcıya verdiğimiz şey değişti.
+  */
+  const submitted = productFormValuesFromFormData(formData);
+  const fail = (message: string, fieldErrors: Record<string, string> = {}) =>
+    actionError(message, fieldErrors, submitted);
+
   const guard = await requireAdminAction();
-  if (!guard.ok) return actionError(guard.message);
+  if (!guard.ok) return fail(guard.message);
 
+  /*
+    TEMEL ALANLAR VE ALT BÖLÜMLER TEK GEÇİŞTE doğrulanır. İlk hatada durulsaydı
+    kullanıcı önce üstteki alanı düzeltip gönderir, sonra alt bölümdeki hatayı
+    görürdü — aynı formu iki kez göndermek gerekirdi. Kurallar aynı; yalnız
+    hepsi aynı anda söyleniyor.
+  */
   const parsed = readProductForm(formData);
-  if (!parsed.success) {
-    return actionError(
-      "Formda düzeltilmesi gereken alanlar var.",
-      fieldErrorsFromZod(z.flattenError(parsed.error)),
-    );
-  }
-
   const sub = readSubResources(formData);
-  if (!sub.success) {
-    return actionError(
-      "Alt bölümlerde (özellik, uyumluluk, pazaryeri) düzeltilmesi gereken kayıtlar var.",
-      fieldErrorsFromZod(z.flattenError(sub.error)),
+
+  if (!parsed.success || !sub.ok) {
+    const fieldErrors = {
+      ...(parsed.success ? {} : fieldErrorsFromZodIssues(parsed.error.issues)),
+      ...(sub.ok ? {} : sub.fieldErrors),
+    };
+    const scope =
+      !parsed.success && !sub.ok
+        ? "Formda ve alt bölümlerde"
+        : parsed.success
+          ? "Alt bölümlerde (özellik, uyumluluk, pazaryeri)"
+          : "Formda";
+    return fail(
+      `${scope} düzeltilmesi gereken alanlar var. Hatalı alanlar aşağıda işaretlendi.`,
+      fieldErrors,
     );
   }
 
   const input = parsed.data;
   const slug = await resolveSlug(input.slug, input.name);
   if (!slug) {
-    return actionError("Slug üretilemedi.", {
+    return fail("Slug üretilemedi.", {
       slug: "Ürün adından slug üretilemedi; slug alanını elle doldurun.",
     });
   }
@@ -234,55 +305,46 @@ export async function saveProductAction(
       .select("id")
       .maybeSingle();
 
-    if (error) {
-      return actionError(messageFromPostgresError(error), {
-        ...(error.code === "23505" && error.message.includes("slug")
-          ? { slug: "Bu slug zaten kullanılıyor." }
-          : {}),
-        ...(error.code === "23505" && error.message.includes("sku")
-          ? { sku: "Bu ürün kodu başka bir üründe kullanılıyor." }
-          : {}),
-      });
-    }
+    if (error) return fail(messageFromPostgresError(error), uniqueFieldErrors(error));
     if (!data) {
       // RLS satırı gizlemiş olabilir; yetki yokmuş gibi davranmak doğrudur.
-      return actionError("Ürün bulunamadı veya güncelleme yetkiniz yok.");
+      return fail("Ürün bulunamadı veya güncelleme yetkiniz yok.");
     }
     savedId = data.id;
   } else {
-    const { data, error } = await supabase
-      .from("products")
-      .insert(row)
-      .select("id")
-      .maybeSingle();
+    const { data, error } = await supabase.from("products").insert(row).select("id").maybeSingle();
 
-    if (error) {
-      return actionError(messageFromPostgresError(error), {
-        ...(error.code === "23505" && error.message.includes("slug")
-          ? { slug: "Bu slug zaten kullanılıyor." }
-          : {}),
-        ...(error.code === "23505" && error.message.includes("sku")
-          ? { sku: "Bu ürün kodu başka bir üründe kullanılıyor." }
-          : {}),
-      });
-    }
-    if (!data) return actionError("Ürün oluşturulamadı.");
+    if (error) return fail(messageFromPostgresError(error), uniqueFieldErrors(error));
+    if (!data) return fail("Ürün oluşturulamadı.");
     savedId = data.id;
   }
 
   const subError = await syncSubResources(savedId, sub.data);
-  if (subError) return actionError(subError);
+  if (subError) return fail(subError);
 
   revalidatePath("/admin/urunler");
   revalidatePath(`/admin/urunler/${savedId}`);
+  revalidatePath("/admin/secki");
   revalidatePath("/veri-kontrol");
+  /*
+    GENEL YÜZEYLER de tazelenir. Burada eskiden yalnız "/" vardı ve gerekçesi
+    "Seçki kutucuğu ana sayfayı değiştirir" diye yazılmıştı — doğruydu ama
+    eksikti: aynı kayıt katalog listesini ve ürünün kendi detay sayfasını da
+    değiştirir. Liste `lib/admin/revalidate.ts` içinde, tek yerde.
+  */
+  revalidateProductSurfaces(slug);
 
   if (!isUpdate) {
     // Yeni ürün: düzenleme sayfasına geç ki görsel eklenebilsin.
     redirect(`/admin/urunler/${savedId}?kaydedildi=1`);
   }
 
-  return actionSuccess("Ürün kaydedildi.");
+  /*
+    Başarıda da değer geri gönderilir. Tek sebebi otomatik üretilen slug:
+    kullanıcı alanı boş bırakmışsa kaydedilen adresi görmesi gerekir, yoksa
+    formda hâlâ boş görünür ve bir sonraki kayıtta ne olacağını bilemez.
+  */
+  return actionSuccess("Ürün kaydedildi.", { ...submitted, id: savedId, slug });
 }
 
 /**
@@ -377,6 +439,15 @@ export async function duplicateProductAction(
   });
   if (subError) return actionError(subError);
 
+  /*
+    GENEL YÜZEY TAZELENMEZ VE BU DOĞRUDUR. Kopya `status: "draft"` ve
+    `is_featured: false` ile oluşturulur (yukarıya bakınız), yani anonim
+    istemciye RLS zaten göstermez. Tazelemek boşa iş olurdu.
+
+    Not düşülmesinin sebebi: bir kod incelemesi burayı "eksik tazeleme" diye
+    işaretledi. Eksik değil; kopyanın taslak doğması bilinçli bir karar.
+    Kopya yayına alındığında tazeleme `setProductStatusAction` içinde olur.
+  */
   revalidatePath("/admin/urunler");
   redirect(`/admin/urunler/${created.id}?kopyalandi=1`);
 }
@@ -425,11 +496,16 @@ export async function setProductStatusAction(
   if (!status.success) return actionError("Geçersiz yayın durumu.");
 
   const supabase = await getServerClient();
+  /*
+    `slug` DE SEÇİLİR: ürünün kendi detay sayfasını tazelemek için gerekir.
+    Yalnız `id` seçiliyordu ve bu yüzden arşivlenen bir ürünün detay sayfası
+    beş dakikaya kadar yayında kalabiliyordu.
+  */
   const { data, error } = await supabase
     .from("products")
     .update({ status: status.data })
     .eq("id", id)
-    .select("id")
+    .select("id, slug")
     .maybeSingle();
 
   if (error) return actionError(messageFromPostgresError(error));
@@ -438,6 +514,11 @@ export async function setProductStatusAction(
   revalidatePath("/admin/urunler");
   revalidatePath(`/admin/urunler/${id}`);
   revalidatePath("/veri-kontrol");
+  /*
+    DURUM DEĞİŞİKLİĞİ EN KRİTİK TAZELEME NOKTASIDIR: arşivlenen ya da yayından
+    kaldırılan bir ürün, tazeleme olmadan sitede satılmaya devam eder.
+  */
+  revalidateProductSurfaces(data.slug);
 
   const labels: Record<string, string> = {
     draft: "taslağa alındı",

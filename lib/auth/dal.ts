@@ -4,6 +4,8 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { getServerClient } from "@/lib/supabase/server-client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { AUTH_NOT_CONFIGURED_ERROR } from "@/lib/auth/messages";
 
 /*
   ============================================================================
@@ -39,6 +41,14 @@ import { getServerClient } from "@/lib/supabase/server-client";
  * `cache()` ile tek render geçişinde yalnız bir kez çalışır.
  */
 export const getAuthUser = cache(async (): Promise<User | null> => {
+  /*
+    Yapılandırma yoksa `getServerClient()` ATAR ve panelin her sayfası 500
+    verirdi. Oysa bu durum bir çökme değil, anlatılabilir bir kurulum
+    eksiğidir: burada "oturum yok" deyip `requireAdminPage()` içinde giriş
+    sayfasına yolluyoruz, giriş sayfası da eksiğin ne olduğunu YAZIYOR.
+  */
+  if (!isSupabaseConfigured) return null;
+
   const supabase = await getServerClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) return null;
@@ -102,6 +112,16 @@ export type AdminGuardResult = { ok: true; identity: AdminIdentity } | Authoriza
  * "Authenticate and authorize").
  */
 export async function requireAdminAction(): Promise<AdminGuardResult> {
+  /*
+    Sıra önemli: yapılandırma eksikken `getAuthUser()` her zaman `null`
+    döndürür ve aksiyon "oturumunuz sona ermiş" derdi. Kullanıcı defalarca
+    giriş yapmayı dener, her seferinde aynı yere düşerdi. Sebebi önce
+    söylüyoruz.
+  */
+  if (!isSupabaseConfigured) {
+    return { ok: false, message: AUTH_NOT_CONFIGURED_ERROR };
+  }
+
   const user = await getAuthUser();
   if (!user) {
     return { ok: false, message: "Oturumunuz sona ermiş. Lütfen yeniden giriş yapın." };

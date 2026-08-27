@@ -34,7 +34,7 @@ export const EMPTY_PRODUCT_FORM: ProductFormValues = {
   boxContents: "",
   installationNotes: "",
   isFeatured: false,
-  displayOrder: 0,
+  displayOrder: "0",
   // Yeni ürün DAİMA taslak doğar; yayına alma bilinçli bir ikinci adımdır.
   status: "draft",
   seoTitle: "",
@@ -104,7 +104,7 @@ export function toProductFormValues(record: AdminProductRecord): ProductFormValu
     boxContents: record.box_contents ?? "",
     installationNotes: record.installation_notes ?? "",
     isFeatured: record.is_featured,
-    displayOrder: record.display_order,
+    displayOrder: String(record.display_order),
     status: record.status,
     seoTitle: record.seo_title ?? "",
     seoDescription: record.seo_description ?? "",

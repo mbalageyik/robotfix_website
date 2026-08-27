@@ -1,15 +1,16 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { AlertCircleIcon } from "@/components/ui/icons";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { FormFeedback } from "@/components/admin/FormFeedback";
 import { PUBLICATION_STATUS_OPTIONS } from "@/components/admin/StatusBadge";
 import { availabilityLabels } from "@/components/ui/AvailabilityBadge";
-import { saveProductAction } from "@/lib/admin/product-actions";
+import { saveProductAction, type ProductActionState } from "@/lib/admin/product-actions";
 import { IDLE_ACTION_STATE } from "@/lib/admin/action-result";
 import type {
   AvailabilityStatus,
@@ -30,6 +31,26 @@ import type {
   (specs[0][label] gibi) sunucu tarafında elle ayrıştırma gerektirirdi. Bunun
   yerine tüm koleksiyon TEK bir gizli alana JSON olarak yazılır ve sunucuda zod
   ile ayrıştırılır. Böylece şema tek kaynaktır ve ayrıştırma hataya kapalıdır.
+
+  ============================================================================
+  DOĞRULAMA HATASINDA VERİ NEDEN KAYBOLMUYOR
+  ============================================================================
+
+  React, `<form action={fn}>` ile yapılan HER gönderimden sonra formu otomatik
+  sıfırlar (`requestFormReset` → `form.reset()`). Kontrolsüz alanlar (yalnız
+  `defaultValue` ile beslenenler) böylece boşalır; onay kutuları ve radyolar ise
+  DOM'da bağlandıkları anki hâllerine döner ve React durumuyla ÇELİŞİR — o an
+  kullanıcı ekranda işaretsiz bir kutu görürken kayıt işaretli gider.
+
+  İki katmanla kapatıldı:
+    1. Tüm alanlar KONTROLLÜ; tek bir `draft` durumu formun tamamını taşır.
+    2. Otomatik sıfırlama `onReset` ile iptal edilir (`reset` olayı iptal
+       edilebilir bir olaydır). Formun kendi sıfırlama düğmesi yoktur, bu
+       yüzden iptal edilecek meşru bir sıfırlama da yoktur.
+
+  Üçüncü emniyet sunucudadır: aksiyon, aldığı değerleri `state.values` ile geri
+  gönderir ve form onları yeniden basar. Böylece bileşen yeniden bağlansa bile
+  veri sunucudan geri gelir. Tarayıcı deposu KULLANILMAZ.
 */
 
 // --- Formun beslendiği tipler ---------------------------------------------
@@ -65,7 +86,8 @@ export interface ProductFormValues {
   boxContents: string;
   installationNotes: string;
   isFeatured: boolean;
-  displayOrder: number;
+  /** Metin olarak tutulur: kullanıcı alanı boşaltabilmeli, `NaN` üretmemeli. */
+  displayOrder: string;
   status: PublicationStatus;
   seoTitle: string;
   seoDescription: string;
@@ -110,6 +132,181 @@ const EMPTY_LINK: MarketplaceLinkDraft = {
   isActive: true,
 };
 
+// --- Hata anahtarı → alan eşlemesi ----------------------------------------
+
+/*
+  Sunucu hataları NOKTALI YOL anahtarlarıyla gelir (`specs.1.value`). Aşağıdaki
+  eşlemeler bu anahtarı iki şeye çevirir: kullanıcıya gösterilecek ALAN ADI ve
+  odaklanılacak KONTROL KİMLİĞİ. İkisi de tek yerde durur ki bir alanın kimliği
+  değiştiğinde hata bağlantısı sessizce kopmasın.
+*/
+
+/** Temel alanlar: hata anahtarı → kontrol kimliğinin soneki. */
+const SCALAR_FIELD_IDS: Record<string, string> = {
+  name: "name",
+  slug: "slug",
+  brandId: "brand",
+  categoryId: "category",
+  sku: "sku",
+  shortDescription: "short",
+  longDescription: "long",
+  priceMinor: "price",
+  compareAtPriceMinor: "compare",
+  availability: "availability",
+  isOriginal: "is-original-error",
+  displayOrder: "order",
+  status: "status",
+  seoTitle: "seo-title",
+  seoDescription: "seo-desc",
+  boxContents: "box",
+  installationNotes: "install",
+};
+
+/** Özetin okunabilir olması için: hata anahtarı → alanın ekrandaki adı. */
+const SCALAR_FIELD_LABELS: Record<string, string> = {
+  name: "Ürün adı",
+  slug: "Slug (adres)",
+  brandId: "Marka",
+  categoryId: "Kategori",
+  sku: "Ürün kodu (SKU)",
+  shortDescription: "Kısa açıklama",
+  longDescription: "Uzun açıklama",
+  priceMinor: "Fiyat (TL)",
+  compareAtPriceMinor: "Eski fiyat (TL)",
+  availability: "Bulunabilirlik",
+  isOriginal: "Orijinal / uyumlu",
+  displayOrder: "Sıra",
+  status: "Yayın durumu",
+  seoTitle: "SEO başlığı",
+  seoDescription: "SEO açıklaması",
+  boxContents: "Kutu içeriği",
+  installationNotes: "Montaj notları",
+};
+
+const LINK_SUBFIELDS: Record<string, { label: string; idPrefix: string }> = {
+  marketplace: { label: "Pazaryeri", idPrefix: "mp" },
+  linkTarget: { label: "Bağlantı hedefi", idPrefix: "mp-target" },
+  customLabel: { label: "Görünen ad", idPrefix: "mp-label" },
+  url: { label: "Bağlantı", idPrefix: "mp-url" },
+};
+
+/** Özet listesinin ekrandaki sırayla akması için kök anahtar sıralaması. */
+const ERROR_ROOT_ORDER = [
+  "name",
+  "slug",
+  "brandId",
+  "categoryId",
+  "sku",
+  "shortDescription",
+  "longDescription",
+  "priceMinor",
+  "compareAtPriceMinor",
+  "availability",
+  "isOriginal",
+  "specs",
+  "compatibleModelIds",
+  "marketplaceLinks",
+  "relatedProductIds",
+  "status",
+  "displayOrder",
+  "seoTitle",
+  "seoDescription",
+  "boxContents",
+  "installationNotes",
+];
+
+interface ErrorTarget {
+  /** Kullanıcıya gösterilecek alan adı. */
+  label: string;
+  /** Odaklanılacak kontrolün kimliği (formId öneki olmadan). */
+  idSuffix: string;
+}
+
+function describeErrorKey(key: string): ErrorTarget {
+  const [root, index, sub] = key.split(".");
+  const rowNumber = index === undefined ? null : Number(index) + 1;
+
+  if (root === "specs") {
+    if (rowNumber === null) return { label: "Teknik özellikler", idSuffix: "specs-error" };
+    if (sub === "label") {
+      return { label: `${rowNumber}. teknik özellik · Özellik`, idSuffix: `spec-label-${index}` };
+    }
+    if (sub === "value") {
+      return { label: `${rowNumber}. teknik özellik · Değer`, idSuffix: `spec-value-${index}` };
+    }
+    return { label: `${rowNumber}. teknik özellik`, idSuffix: `spec-label-${index}` };
+  }
+
+  if (root === "marketplaceLinks") {
+    if (rowNumber === null) return { label: "Pazaryeri bağlantıları", idSuffix: "links-error" };
+    const subField = sub === undefined ? undefined : LINK_SUBFIELDS[sub];
+    if (subField) {
+      return {
+        label: `${rowNumber}. pazaryeri bağlantısı · ${subField.label}`,
+        idSuffix: `${subField.idPrefix}-${index}`,
+      };
+    }
+    return { label: `${rowNumber}. pazaryeri bağlantısı`, idSuffix: `mp-${index}` };
+  }
+
+  if (root === "compatibleModelIds") {
+    return { label: "Uyumlu cihaz modelleri", idSuffix: "compat-error" };
+  }
+
+  if (root === "relatedProductIds") {
+    return { label: "İlgili ürünler", idSuffix: "related-error" };
+  }
+
+  const scalarId = SCALAR_FIELD_IDS[root];
+  if (scalarId) return { label: SCALAR_FIELD_LABELS[root] ?? root, idSuffix: scalarId };
+
+  return { label: "Form", idSuffix: "form-error" };
+}
+
+/** Özet listesini ekran sırasına dizer: önce bölüm, sonra satır, sonra alan. */
+function compareErrorKeys(a: string, b: string): number {
+  const [rootA, indexA = "", subA = ""] = a.split(".");
+  const [rootB, indexB = "", subB = ""] = b.split(".");
+
+  const rankA = ERROR_ROOT_ORDER.indexOf(rootA);
+  const rankB = ERROR_ROOT_ORDER.indexOf(rootB);
+  const safeA = rankA === -1 ? ERROR_ROOT_ORDER.length : rankA;
+  const safeB = rankB === -1 ? ERROR_ROOT_ORDER.length : rankB;
+  if (safeA !== safeB) return safeA - safeB;
+
+  const rowA = indexA === "" ? -1 : Number(indexA);
+  const rowB = indexB === "" ? -1 : Number(indexB);
+  if (rowA !== rowB) return rowA - rowB;
+
+  return subA.localeCompare(subB);
+}
+
+// --- Bölüm düzeyi hata kutusu ---------------------------------------------
+
+/*
+  Bir satıra/kontrole bağlanamayan hatalar (bölüm sınırları, okunamayan
+  koleksiyon) burada gösterilir. `tabIndex={-1}` verilmesinin sebebi
+  odaklanabilir olması: otomatik kaydırma ilk hatalı ÖĞEYE odaklanır ve bu
+  öğenin bir input olması şart değildir.
+*/
+function SectionError({ id, message }: { id: string; message: string | undefined }) {
+  if (!message) return null;
+  return (
+    <p
+      id={id}
+      tabIndex={-1}
+      data-error-anchor="true"
+      className="flex items-start gap-1.5 rounded-md border border-danger/35 bg-danger/8 p-3 text-caption font-medium text-danger outline-offset-2"
+    >
+      <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
+      <span>
+        <span className="sr-only">Hata: </span>
+        {message}
+      </span>
+    </p>
+  );
+}
+
 export function ProductForm({
   values,
   options,
@@ -117,41 +314,178 @@ export function ProductForm({
   values: ProductFormValues;
   options: ProductFormOptions;
 }) {
-  const [state, formAction] = useActionState(saveProductAction, IDLE_ACTION_STATE);
+  const [state, formAction] = useActionState<ProductActionState, FormData>(
+    saveProductAction,
+    IDLE_ACTION_STATE,
+  );
   const formId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
-  const [specs, setSpecs] = useState<SpecDraft[]>(values.specs);
-  const [links, setLinks] = useState<MarketplaceLinkDraft[]>(values.marketplaceLinks);
-  const [compatible, setCompatible] = useState<string[]>(values.compatibleModelIds);
-  const [related, setRelated] = useState<string[]>(values.relatedProductIds);
+  /*
+    FORMUN TAMAMI TEK BİR DURUMDA. Alanların hepsi kontrollü olduğu için
+    React'in otomatik sıfırlaması kullanıcı verisini silemez ve gönderim
+    sonrası dönen değerler tek atamayla geri basılabilir.
+  */
+  const [draft, setDraft] = useState<ProductFormValues>(values);
+
+  /*
+    Aksiyondan yeni bir sonuç geldiğinde gönderilen değerleri geri bas.
+    Render sırasında yapılır (React'in "türetilmiş durumu ayarla" deseni):
+    efekt ile yapılsaydı kullanıcı bir kare boyunca eski/boş formu görürdü.
+    `state` her gönderimde YENİ bir nesnedir, bu yüzden karşılaştırma güvenli.
+  */
+  const [seenState, setSeenState] = useState<ProductActionState>(state);
+  if (seenState !== state) {
+    setSeenState(state);
+    if (state.values) setDraft(state.values);
+  }
 
   const errors = state.fieldErrors;
+  const errorKeys = Object.keys(errors).sort(compareErrorKeys);
+  const hasFieldErrors = errorKeys.length > 0;
 
-  function toggle(list: string[], id: string): string[] {
-    return list.includes(id) ? list.filter((entry) => entry !== id) : [...list, id];
+  /*
+    OTOMATİK KAYDIRMA VE ODAK.
+
+    İlk hatalı öğe DOM'dan sorgulanır, hata haritasından değil: DOM sırası
+    ekranda gördüğümüz sıradır ve satır/alan sıralamasını ayrıca hesaplamak
+    gerekmez. Hiçbir alana bağlanamayan bir hata varsa (veritabanı hatası,
+    yetki hatası) odak üstteki bildirim kutusuna gider — kullanıcı hiçbir
+    zaman "bir şey oldu ama nerede" durumunda kalmaz.
+  */
+  useEffect(() => {
+    if (state.status === "idle") return;
+    const form = formRef.current;
+    if (!form) return;
+
+    const target =
+      state.status === "error"
+        ? form.querySelector<HTMLElement>('[aria-invalid="true"], [data-error-anchor="true"]')
+        : null;
+    const focusTarget = target ?? feedbackRef.current;
+    if (!focusTarget) return;
+
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    focusTarget.scrollIntoView({
+      block: "center",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+    focusTarget.focus({ preventScroll: true });
+  }, [state]);
+
+  function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateSpec(index: number, patch: Partial<SpecDraft>) {
+    setDraft((current) => ({
+      ...current,
+      specs: current.specs.map((entry, position) =>
+        position === index ? { ...entry, ...patch } : entry,
+      ),
+    }));
+  }
+
+  function updateLink(index: number, patch: Partial<MarketplaceLinkDraft>) {
+    setDraft((current) => ({
+      ...current,
+      marketplaceLinks: current.marketplaceLinks.map((entry, position) =>
+        position === index ? { ...entry, ...patch } : entry,
+      ),
+    }));
+  }
+
+  function toggleId(key: "compatibleModelIds" | "relatedProductIds", id: string) {
+    setDraft((current) => {
+      const list = current[key];
+      return {
+        ...current,
+        [key]: list.includes(id) ? list.filter((entry) => entry !== id) : [...list, id],
+      };
+    });
+  }
+
+  function focusErrorTarget(idSuffix: string) {
+    // Hedef bulunamazsa (beklenmedik bir hata anahtarı) odak özet kutusunda
+    // kalır; tıklamanın hiçbir şey yapmaması en kötü sonuçtur.
+    const element = document.getElementById(`${formId}-${idSuffix}`) ?? feedbackRef.current;
+    if (!element) return;
+    element.scrollIntoView({ block: "center" });
+    element.focus({ preventScroll: true });
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6" noValidate>
-      {values.id && <input type="hidden" name="id" value={values.id} />}
+    <form
+      ref={formRef}
+      action={formAction}
+      className="flex flex-col gap-6"
+      noValidate
+      /*
+        React'in gönderim sonrası otomatik sıfırlaması burada iptal edilir
+        (dosya başlığındaki gerekçe). `reset` olayı iptal edilebilir bir
+        olaydır; formun meşru bir sıfırlama düğmesi yoktur.
+      */
+      onReset={(event) => event.preventDefault()}
+    >
+      {draft.id && <input type="hidden" name="id" value={draft.id} />}
 
       {/* Dinamik koleksiyonlar — sunucuda zod ile ayrıştırılır. */}
-      <input type="hidden" name="specs" value={JSON.stringify(specs)} />
-      <input type="hidden" name="compatibleModelIds" value={JSON.stringify(compatible)} />
+      <input type="hidden" name="specs" value={JSON.stringify(draft.specs)} />
+      <input
+        type="hidden"
+        name="compatibleModelIds"
+        value={JSON.stringify(draft.compatibleModelIds)}
+      />
       <input
         type="hidden"
         name="marketplaceLinks"
         value={JSON.stringify(
-          links.map((link) => ({
+          draft.marketplaceLinks.map((link) => ({
             ...link,
             // 'other' dışında görünen ad kullanılmaz; boş gönderilir.
             customLabel: link.marketplace === "other" ? link.customLabel : "",
           })),
         )}
       />
-      <input type="hidden" name="relatedProductIds" value={JSON.stringify(related)} />
+      <input
+        type="hidden"
+        name="relatedProductIds"
+        value={JSON.stringify(draft.relatedProductIds)}
+      />
 
-      <FormFeedback state={state} />
+      {/*
+        ÜSTTEKİ KUTU YALNIZ ÖZETTİR. Her hatanın asıl açıklaması kendi alanının
+        yanındadır; buradaki liste sayfanın neresinde ne olduğunu gösterir ve
+        tek tıkla oraya götürür. Uzun bir formda ekranın dışında kalan bir
+        hatayı bulmanın tek pratik yolu budur.
+      */}
+      <div ref={feedbackRef} tabIndex={-1} className="flex flex-col gap-2 outline-offset-4">
+        <FormFeedback state={state} />
+
+        {state.status === "error" && hasFieldErrors && (
+          <ul className="flex flex-col gap-1 rounded-lg border border-danger/35 bg-danger/8 p-4 text-caption text-danger">
+            {errorKeys.map((key) => {
+              const target = describeErrorKey(key);
+              return (
+                <li key={key} className="flex flex-wrap items-baseline gap-x-1.5">
+                  <button
+                    type="button"
+                    onClick={() => focusErrorTarget(target.idSuffix)}
+                    className="font-semibold underline underline-offset-2 hover:no-underline"
+                  >
+                    {target.label}
+                  </button>
+                  <span>— {errors[key]}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
       {/* ---- Temel bilgiler ------------------------------------------- */}
       <Card>
@@ -160,7 +494,14 @@ export function ProductForm({
 
           <Field id={`${formId}-name`} label="Ürün adı" required error={errors.name}>
             {(props) => (
-              <input {...props} name="name" defaultValue={values.name} maxLength={200} required />
+              <input
+                {...props}
+                name="name"
+                value={draft.name}
+                onChange={(event) => update("name", event.target.value)}
+                maxLength={200}
+                required
+              />
             )}
           </Field>
 
@@ -174,7 +515,8 @@ export function ProductForm({
               <input
                 {...props}
                 name="slug"
-                defaultValue={values.slug}
+                value={draft.slug}
+                onChange={(event) => update("slug", event.target.value)}
                 maxLength={200}
                 inputMode="url"
                 autoCapitalize="none"
@@ -187,7 +529,12 @@ export function ProductForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id={`${formId}-brand`} label="Marka" error={errors.brandId}>
               {(props) => (
-                <select {...props} name="brandId" defaultValue={values.brandId}>
+                <select
+                  {...props}
+                  name="brandId"
+                  value={draft.brandId}
+                  onChange={(event) => update("brandId", event.target.value)}
+                >
                   <option value="">Seçilmedi</option>
                   {options.brands.map((brand) => (
                     <option key={brand.id} value={brand.id}>
@@ -200,7 +547,12 @@ export function ProductForm({
 
             <Field id={`${formId}-category`} label="Kategori" error={errors.categoryId}>
               {(props) => (
-                <select {...props} name="categoryId" defaultValue={values.categoryId}>
+                <select
+                  {...props}
+                  name="categoryId"
+                  value={draft.categoryId}
+                  onChange={(event) => update("categoryId", event.target.value)}
+                >
                   <option value="">Seçilmedi</option>
                   {options.categories.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -218,7 +570,15 @@ export function ProductForm({
             hint="Benzersizdir. Bilinmiyorsa boş bırakın."
             error={errors.sku}
           >
-            {(props) => <input {...props} name="sku" defaultValue={values.sku} maxLength={64} />}
+            {(props) => (
+              <input
+                {...props}
+                name="sku"
+                value={draft.sku}
+                onChange={(event) => update("sku", event.target.value)}
+                maxLength={64}
+              />
+            )}
           </Field>
 
           <Field
@@ -231,7 +591,8 @@ export function ProductForm({
               <textarea
                 {...props}
                 name="shortDescription"
-                defaultValue={values.shortDescription}
+                value={draft.shortDescription}
+                onChange={(event) => update("shortDescription", event.target.value)}
                 rows={3}
                 maxLength={400}
               />
@@ -248,7 +609,8 @@ export function ProductForm({
               <textarea
                 {...props}
                 name="longDescription"
-                defaultValue={values.longDescription}
+                value={draft.longDescription}
+                onChange={(event) => update("longDescription", event.target.value)}
                 rows={8}
                 maxLength={20000}
               />
@@ -279,7 +641,8 @@ export function ProductForm({
                 <input
                   {...props}
                   name="price"
-                  defaultValue={values.price}
+                  value={draft.price}
+                  onChange={(event) => update("price", event.target.value)}
                   inputMode="decimal"
                   placeholder="örn. 1249,90"
                 />
@@ -296,7 +659,8 @@ export function ProductForm({
                 <input
                   {...props}
                   name="compareAtPrice"
-                  defaultValue={values.compareAtPrice}
+                  value={draft.compareAtPrice}
+                  onChange={(event) => update("compareAtPrice", event.target.value)}
                   inputMode="decimal"
                 />
               )}
@@ -310,7 +674,14 @@ export function ProductForm({
             error={errors.availability}
           >
             {(props) => (
-              <select {...props} name="availability" defaultValue={values.availability}>
+              <select
+                {...props}
+                name="availability"
+                value={draft.availability}
+                onChange={(event) =>
+                  update("availability", event.target.value as AvailabilityStatus)
+                }
+              >
                 {AVAILABILITY_OPTIONS.map((status) => (
                   <option key={status} value={status}>
                     {availabilityLabels[status]}
@@ -327,6 +698,7 @@ export function ProductForm({
           */}
           <fieldset className="flex flex-col gap-2">
             <legend className="text-caption font-semibold text-text">Orijinal / uyumlu</legend>
+            <SectionError id={`${formId}-is-original-error`} message={errors.isOriginal} />
             {(
               [
                 { value: "unknown", label: "Bilinmiyor (doğrulanmadı) — sitede gösterilmez" },
@@ -339,7 +711,11 @@ export function ProductForm({
                   type="radio"
                   name="isOriginal"
                   value={option.value}
-                  defaultChecked={values.isOriginal === option.value}
+                  checked={draft.isOriginal === option.value}
+                  onChange={() => update("isOriginal", option.value)}
+                  aria-describedby={
+                    errors.isOriginal ? `${formId}-is-original-error` : undefined
+                  }
                   className="size-4"
                 />
                 {option.label}
@@ -355,46 +731,45 @@ export function ProductForm({
           <legend className="text-h4">Teknik özellikler</legend>
           <p className="text-caption text-text-muted">
             Yalnız DOĞRULANMIŞ bilgi girin. Emin olmadığınız bir özelliği boş bırakmak, yanlış
-            yazmaktan iyidir.
+            yazmaktan iyidir. Eklenen her satırın hem adı hem değeri dolu olmalıdır; boş kalan
+            bir satırı kaydetmek yerine kaldırın.
           </p>
 
-          {specs.length === 0 && (
+          <SectionError id={`${formId}-specs-error`} message={errors.specs} />
+
+          {draft.specs.length === 0 && (
             <p className="text-caption text-text-muted">Henüz özellik eklenmedi.</p>
           )}
 
           <ul className="flex flex-col gap-3">
-            {specs.map((spec, index) => (
+            {draft.specs.map((spec, index) => (
               <li key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <Field id={`${formId}-spec-label-${index}`} label="Özellik">
+                <Field
+                  id={`${formId}-spec-label-${index}`}
+                  label={`${index + 1}. özellik`}
+                  error={errors[`specs.${index}.label`] ?? errors[`specs.${index}`]}
+                >
                   {(props) => (
                     <input
                       {...props}
                       value={spec.label}
                       maxLength={120}
-                      onChange={(event) =>
-                        setSpecs((current) =>
-                          current.map((entry, position) =>
-                            position === index ? { ...entry, label: event.target.value } : entry,
-                          ),
-                        )
-                      }
+                      onChange={(event) => updateSpec(index, { label: event.target.value })}
                     />
                   )}
                 </Field>
 
-                <Field id={`${formId}-spec-value-${index}`} label="Değer">
+                <Field
+                  id={`${formId}-spec-value-${index}`}
+                  label="Değer"
+                  error={errors[`specs.${index}.value`]}
+                >
                   {(props) => (
                     <input
                       {...props}
                       value={spec.value}
                       maxLength={500}
-                      onChange={(event) =>
-                        setSpecs((current) =>
-                          current.map((entry, position) =>
-                            position === index ? { ...entry, value: event.target.value } : entry,
-                          ),
-                        )
-                      }
+                      onChange={(event) => updateSpec(index, { value: event.target.value })}
                     />
                   )}
                 </Field>
@@ -404,7 +779,10 @@ export function ProductForm({
                   size="sm"
                   aria-label={`${index + 1}. özelliği kaldır`}
                   onClick={() =>
-                    setSpecs((current) => current.filter((_, position) => position !== index))
+                    setDraft((current) => ({
+                      ...current,
+                      specs: current.specs.filter((_, position) => position !== index),
+                    }))
                   }
                 >
                   Kaldır
@@ -417,7 +795,12 @@ export function ProductForm({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setSpecs((current) => [...current, { label: "", value: "" }])}
+              onClick={() =>
+                setDraft((current) => ({
+                  ...current,
+                  specs: [...current.specs, { label: "", value: "" }],
+                }))
+              }
             >
               Özellik ekle
             </Button>
@@ -433,6 +816,16 @@ export function ProductForm({
             Uyumluluk DOĞRULANMIŞ bir iddiadır (bilgi dosyası §20). Yalnız gerçekten test edilmiş
             veya üreticinin belgelediği modelleri işaretleyin.
           </p>
+
+          <SectionError
+            id={`${formId}-compat-error`}
+            message={
+              errors.compatibleModelIds ??
+              errorKeys
+                .filter((key) => key.startsWith("compatibleModelIds."))
+                .map((key) => errors[key])[0]
+            }
+          />
 
           {options.deviceModels.length === 0 ? (
             <p className="text-caption text-text-muted">
@@ -450,8 +843,8 @@ export function ProductForm({
                     <input
                       type="checkbox"
                       className="size-4"
-                      checked={compatible.includes(model.id)}
-                      onChange={() => setCompatible((current) => toggle(current, model.id))}
+                      checked={draft.compatibleModelIds.includes(model.id)}
+                      onChange={() => toggleId("compatibleModelIds", model.id)}
                     />
                     <span>
                       {model.name}
@@ -479,30 +872,35 @@ export function ProductForm({
             <code>https://</code> ile başlamalıdır.
           </p>
 
-          {links.length === 0 && (
+          <SectionError id={`${formId}-links-error`} message={errors.marketplaceLinks} />
+
+          {draft.marketplaceLinks.length === 0 && (
             <p className="text-caption text-text-muted">Henüz bağlantı eklenmedi.</p>
           )}
 
           <ul className="flex flex-col gap-4">
-            {links.map((link, index) => (
+            {draft.marketplaceLinks.map((link, index) => (
               <li
                 key={index}
                 className="flex flex-col gap-3 rounded-md border border-border p-4"
               >
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field id={`${formId}-mp-${index}`} label="Pazaryeri">
+                  <Field
+                    id={`${formId}-mp-${index}`}
+                    label={`${index + 1}. bağlantı · Pazaryeri`}
+                    error={
+                      errors[`marketplaceLinks.${index}.marketplace`] ??
+                      errors[`marketplaceLinks.${index}`]
+                    }
+                  >
                     {(props) => (
                       <select
                         {...props}
                         value={link.marketplace}
                         onChange={(event) =>
-                          setLinks((current) =>
-                            current.map((entry, position) =>
-                              position === index
-                                ? { ...entry, marketplace: event.target.value as Marketplace }
-                                : entry,
-                            ),
-                          )
+                          updateLink(index, {
+                            marketplace: event.target.value as Marketplace,
+                          })
                         }
                       >
                         {MARKETPLACE_OPTIONS.map((option) => (
@@ -514,22 +912,19 @@ export function ProductForm({
                     )}
                   </Field>
 
-                  <Field id={`${formId}-mp-target-${index}`} label="Bağlantı hedefi">
+                  <Field
+                    id={`${formId}-mp-target-${index}`}
+                    label="Bağlantı hedefi"
+                    error={errors[`marketplaceLinks.${index}.linkTarget`]}
+                  >
                     {(props) => (
                       <select
                         {...props}
                         value={link.linkTarget}
                         onChange={(event) =>
-                          setLinks((current) =>
-                            current.map((entry, position) =>
-                              position === index
-                                ? {
-                                    ...entry,
-                                    linkTarget: event.target.value as MarketplaceLinkTarget,
-                                  }
-                                : entry,
-                            ),
-                          )
+                          updateLink(index, {
+                            linkTarget: event.target.value as MarketplaceLinkTarget,
+                          })
                         }
                       >
                         <option value="product">Ürün sayfası</option>
@@ -545,6 +940,7 @@ export function ProductForm({
                     label="Görünen ad"
                     required
                     hint='"Diğer" seçildiğinde zorunludur — buton üzerinde bu ad yazar.'
+                    error={errors[`marketplaceLinks.${index}.customLabel`]}
                   >
                     {(props) => (
                       <input
@@ -552,20 +948,19 @@ export function ProductForm({
                         value={link.customLabel}
                         maxLength={60}
                         onChange={(event) =>
-                          setLinks((current) =>
-                            current.map((entry, position) =>
-                              position === index
-                                ? { ...entry, customLabel: event.target.value }
-                                : entry,
-                            ),
-                          )
+                          updateLink(index, { customLabel: event.target.value })
                         }
                       />
                     )}
                   </Field>
                 )}
 
-                <Field id={`${formId}-mp-url-${index}`} label="Bağlantı (https://)" required>
+                <Field
+                  id={`${formId}-mp-url-${index}`}
+                  label="Bağlantı (https://)"
+                  required
+                  error={errors[`marketplaceLinks.${index}.url`]}
+                >
                   {(props) => (
                     <input
                       {...props}
@@ -573,13 +968,7 @@ export function ProductForm({
                       value={link.url}
                       maxLength={2000}
                       placeholder="https://"
-                      onChange={(event) =>
-                        setLinks((current) =>
-                          current.map((entry, position) =>
-                            position === index ? { ...entry, url: event.target.value } : entry,
-                          ),
-                        )
-                      }
+                      onChange={(event) => updateLink(index, { url: event.target.value })}
                     />
                   )}
                 </Field>
@@ -590,13 +979,7 @@ export function ProductForm({
                       type="checkbox"
                       className="size-4"
                       checked={link.isActive}
-                      onChange={() =>
-                        setLinks((current) =>
-                          current.map((entry, position) =>
-                            position === index ? { ...entry, isActive: !entry.isActive } : entry,
-                          ),
-                        )
-                      }
+                      onChange={() => updateLink(index, { isActive: !link.isActive })}
                     />
                     Sitede göster
                   </label>
@@ -606,7 +989,12 @@ export function ProductForm({
                     size="sm"
                     aria-label={`${index + 1}. pazaryeri bağlantısını kaldır`}
                     onClick={() =>
-                      setLinks((current) => current.filter((_, position) => position !== index))
+                      setDraft((current) => ({
+                        ...current,
+                        marketplaceLinks: current.marketplaceLinks.filter(
+                          (_, position) => position !== index,
+                        ),
+                      }))
                     }
                   >
                     Kaldır
@@ -620,8 +1008,13 @@ export function ProductForm({
             <Button
               variant="secondary"
               size="sm"
-              disabled={links.length >= MARKETPLACE_OPTIONS.length}
-              onClick={() => setLinks((current) => [...current, { ...EMPTY_LINK }])}
+              disabled={draft.marketplaceLinks.length >= MARKETPLACE_OPTIONS.length}
+              onClick={() =>
+                setDraft((current) => ({
+                  ...current,
+                  marketplaceLinks: [...current.marketplaceLinks, { ...EMPTY_LINK }],
+                }))
+              }
             >
               Bağlantı ekle
             </Button>
@@ -637,6 +1030,16 @@ export function ProductForm({
             Ürün sayfasının altında önerilir. En fazla 20 ürün seçilebilir.
           </p>
 
+          <SectionError
+            id={`${formId}-related-error`}
+            message={
+              errors.relatedProductIds ??
+              errorKeys
+                .filter((key) => key.startsWith("relatedProductIds."))
+                .map((key) => errors[key])[0]
+            }
+          />
+
           {options.relatedCandidates.length === 0 ? (
             <p className="text-caption text-text-muted">Seçilebilecek başka ürün yok.</p>
           ) : (
@@ -647,8 +1050,8 @@ export function ProductForm({
                     <input
                       type="checkbox"
                       className="size-4"
-                      checked={related.includes(candidate.id)}
-                      onChange={() => setRelated((current) => toggle(current, candidate.id))}
+                      checked={draft.relatedProductIds.includes(candidate.id)}
+                      onChange={() => toggleId("relatedProductIds", candidate.id)}
                     />
                     {candidate.name}
                   </label>
@@ -667,7 +1070,12 @@ export function ProductForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id={`${formId}-status`} label="Yayın durumu" required error={errors.status}>
               {(props) => (
-                <select {...props} name="status" defaultValue={values.status}>
+                <select
+                  {...props}
+                  name="status"
+                  value={draft.status}
+                  onChange={(event) => update("status", event.target.value as PublicationStatus)}
+                >
                   {PUBLICATION_STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -690,21 +1098,48 @@ export function ProductForm({
                   type="number"
                   min={0}
                   step={1}
-                  defaultValue={values.displayOrder}
+                  value={draft.displayOrder}
+                  onChange={(event) => update("displayOrder", event.target.value)}
                 />
               )}
             </Field>
           </div>
 
-          <label className="flex items-center gap-2 text-body">
-            <input
-              type="checkbox"
-              name="isFeatured"
-              defaultChecked={values.isFeatured}
-              className="size-4"
-            />
-            Öne çıkan ürün
-          </label>
+          {/*
+            SEÇKİ KUTUCUĞU.
+
+            Etiket, ana sayfada BASILAN adla aynıdır. Eskiden "Öne çıkan ürün"
+            yazıyordu; sitede ise bölümün adı "Robot Fix Seçkisi". Aynı kavramın
+            iki yerde iki farklı adı olması, yöneticinin alanı arayıp
+            bulamamasının sebebiydi.
+
+            Yardım metni de yeni: kutucuk çıplak bir `<label>` idi, formdaki
+            diğer alanların aksine ne açıklaması ne de `aria-describedby`
+            bağlantısı vardı — ne işe yaradığı hiçbir yerde yazmıyordu.
+          */}
+          <div className="flex flex-col gap-1.5">
+            <label className="flex items-center gap-2 text-body">
+              <input
+                type="checkbox"
+                name="isFeatured"
+                checked={draft.isFeatured}
+                onChange={(event) => update("isFeatured", event.target.checked)}
+                aria-describedby={`${formId}-featured-hint`}
+                className="size-4"
+              />
+              Robot Fix Seçkisi&rsquo;nde göster
+            </label>
+            <p id={`${formId}-featured-hint`} className="text-caption text-text-muted">
+              Ana sayfadaki &laquo;Robot Fix Seçkisi&raquo; bölümünde gösterilir. Sıralama
+              yukarıdaki <strong className="font-semibold text-text">Sıra</strong> alanından
+              gelir. Yalnız yayına alınmış ürünler görünür. Seçkinin tamamını tek ekrandan
+              yönetmek için:{" "}
+              <Link href="/admin/secki" className="text-link underline underline-offset-2">
+                Seçki sayfası
+              </Link>
+              .
+            </p>
+          </div>
 
           <Field
             id={`${formId}-seo-title`}
@@ -713,7 +1148,13 @@ export function ProductForm({
             error={errors.seoTitle}
           >
             {(props) => (
-              <input {...props} name="seoTitle" defaultValue={values.seoTitle} maxLength={70} />
+              <input
+                {...props}
+                name="seoTitle"
+                value={draft.seoTitle}
+                onChange={(event) => update("seoTitle", event.target.value)}
+                maxLength={70}
+              />
             )}
           </Field>
 
@@ -727,23 +1168,21 @@ export function ProductForm({
               <textarea
                 {...props}
                 name="seoDescription"
-                defaultValue={values.seoDescription}
+                value={draft.seoDescription}
+                onChange={(event) => update("seoDescription", event.target.value)}
                 rows={3}
                 maxLength={200}
               />
             )}
           </Field>
 
-          <Field
-            id={`${formId}-box`}
-            label="Kutu içeriği"
-            error={errors.boxContents}
-          >
+          <Field id={`${formId}-box`} label="Kutu içeriği" error={errors.boxContents}>
             {(props) => (
               <textarea
                 {...props}
                 name="boxContents"
-                defaultValue={values.boxContents}
+                value={draft.boxContents}
+                onChange={(event) => update("boxContents", event.target.value)}
                 rows={3}
                 maxLength={2000}
               />
@@ -759,7 +1198,8 @@ export function ProductForm({
               <textarea
                 {...props}
                 name="installationNotes"
-                defaultValue={values.installationNotes}
+                value={draft.installationNotes}
+                onChange={(event) => update("installationNotes", event.target.value)}
                 rows={4}
                 maxLength={4000}
               />
@@ -770,7 +1210,7 @@ export function ProductForm({
 
       <div className="flex flex-wrap gap-3">
         <SubmitButton pendingLabel="Kaydediliyor…">
-          {values.id ? "Değişiklikleri kaydet" : "Ürünü oluştur"}
+          {draft.id ? "Değişiklikleri kaydet" : "Ürünü oluştur"}
         </SubmitButton>
         <Link
           href="/admin/urunler"

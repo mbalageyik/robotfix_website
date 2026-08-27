@@ -147,6 +147,70 @@ export async function getAdminProduct(id: string) {
   return ok(data);
 }
 
+// --- Robot Fix Seçkisi (öne çıkan ürünler) --------------------------------
+
+/*
+  SEÇKİ SORGUSU.
+
+  Ana sayfadaki `listFeaturedProducts()` ile AYNI SIRALAMAYI kullanır
+  (`display_order` artan, sonra `name`). Panelde farklı bir sıra göstermek,
+  yöneticinin "yukarı taşı" dediği satırın ana sayfada başka bir yere gitmesi
+  demek olurdu.
+
+  Fark yalnız GÖRÜNÜRLÜKTE: bu sorgu yöneticinin oturumuyla çalışır ve taslak,
+  pasif, arşiv ve örnek satırları da görür. Ana sayfa sorgusu onları göremez
+  (RLS + demo bayrağı) — ekran bu farkı satır satır söyler.
+*/
+const ADMIN_FEATURED_SELECT = `
+  id, name, slug, status, is_demo, display_order,
+  images:product_images ( storage_path, alt_text, is_primary, display_order )
+`;
+
+export interface AdminFeaturedProductRow {
+  id: string;
+  name: string;
+  slug: string;
+  status: PublicationStatus;
+  isDemo: boolean;
+  displayOrder: number;
+  primaryImage: { storagePath: string; altText: string } | null;
+}
+
+export async function listAdminFeaturedProducts(): Promise<
+  DataResult<AdminFeaturedProductRow[]>
+> {
+  const supabase = await getServerClient();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(ADMIN_FEATURED_SELECT)
+    .eq("is_featured", true)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) return fail("query_failed", error.message, error.code);
+
+  return ok(
+    (data ?? []).map((row) => {
+      // Ana görsel yoksa en küçük sıralı görsel gösterilir — kartlardaki kural.
+      const images = [...(row.images ?? [])].sort((a, b) => a.display_order - b.display_order);
+      const primary = images.find((image) => image.is_primary) ?? images[0] ?? null;
+
+      return {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        status: row.status,
+        isDemo: row.is_demo,
+        displayOrder: row.display_order,
+        primaryImage: primary
+          ? { storagePath: primary.storage_path, altText: primary.alt_text }
+          : null,
+      };
+    }),
+  );
+}
+
 // --- Taksonomi (panel: tüm durumlar) --------------------------------------
 
 export async function listAdminBrands(): Promise<DataResult<BrandRow[]>> {

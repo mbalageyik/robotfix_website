@@ -98,11 +98,21 @@ export async function saveHomeSectionsAction(
 
   /*
     Ana sayfa 5 dakikalık tazelik penceresiyle statik üretilir
-    (`app/page.tsx` → `revalidate = 300`); beklemeden yansıması için yol elle
-    tazelenir. YALNIZ "/" tazelenir: bu ayar başka hiçbir sayfayı etkilemez,
-    kök düzeni tazelemek gereksiz iş olurdu.
+    (`app/(site)/page.tsx` → `revalidate = 300`); beklemeden yansıması için
+    yol elle tazelenir.
+
+    DÜZEN TAZELENİR ("layout"), yalnız "/" DEĞİL. Bu notun önceki hâli "bu
+    ayar başka hiçbir sayfayı etkilemez" diyordu; genel site başlığı
+    eklendiğinde bu doğruluğunu yitirdi. `components/layout/SiteHeader.tsx`
+    aynı yapılandırmayı okur ve menüde YALNIZ görünen bölümlerin çapasını
+    gösterir; başlık ise `app/(site)/layout.tsx` üzerinden `/urunler` ve
+    ürün detayı sayfalarında da render edilir.
+
+    Yalnız "/" tazelenseydi, panelden kapatılan bir bölümün çapası katalog
+    sayfalarındaki menüde asılı kalırdı — tıklandığında hiçbir yere
+    gitmeyen bir bağlantı.
   */
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 
   const hiddenCount = Object.values(parsed.data).filter(
     (entry) => !entry.enabled || entry.contentStatus !== "live",

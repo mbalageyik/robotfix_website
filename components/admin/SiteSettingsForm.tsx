@@ -98,7 +98,7 @@ export function SiteSettingsForm({ values }: { values: SiteSettingsValues }) {
           <Field
             id={`${formId}-hours`}
             label="Çalışma saatleri"
-            hint="Doğrulanmamışsa boş bırakın — yanlış saat, kapalı kapıya gelen müşteri demektir."
+            hint="Doğrulanmamışsa boş bırakın — yanlış saat, kapalı kapıya gelen müşteri demektir. TODO(business): Pazar günü çalışma durumu doğrulanmadı; şu anki değerde varsayılan olarak “kapalı” yazıyor."
             error={errors.working_hours}
           >
             {(props) => (
@@ -142,8 +142,8 @@ export function SiteSettingsForm({ values }: { values: SiteSettingsValues }) {
             durumdur — devre dışı bir buton göstermek yerine buton hiç çizilmez.
           */}
           <p className="text-caption text-text-muted">
-            Boş bırakılan pazaryerinin butonu sitede hiç gösterilmez. Bunlar MAĞAZA
-            bağlantılarıdır; ürün bazlı bağlantılar ürün formunda tutulur.
+            Boş bırakılan pazaryerinin butonu sitede hiç gösterilmez. Bunlar MAĞAZA bağlantılarıdır;
+            ürün bazlı bağlantılar ürün formunda tutulur.
           </p>
 
           {(

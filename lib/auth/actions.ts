@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerClient } from "@/lib/supabase/server-client";
 import { getAuthUser } from "@/lib/auth/dal";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  AUTH_NOT_CONFIGURED_ERROR,
+  AUTH_RATE_LIMITED_ERROR,
+  AUTH_UNAVAILABLE_ERROR,
+  GENERIC_LOGIN_ERROR,
+} from "@/lib/auth/messages";
 
 /*
   Kimlik doğrulama aksiyonları.
@@ -24,22 +31,22 @@ export interface LoginState {
 }
 
 /*
-  KULLANICI SAYIMI SIZDIRILMAZ.
-
-  Hata mesajı, "e-posta bulunamadı" ile "parola yanlış" durumlarını AYIRT
-  ETTİRMEZ. Ayırt ettirseydi bu form bir kullanıcı numaralandırma (user
-  enumeration) aracına dönerdi: saldırgan hangi e-postaların kayıtlı olduğunu
-  tek tek öğrenebilirdi.
-
-  Aynı sebeple `is_admin` durumu da burada sızdırılmaz: yönetici olmayan geçerli
-  bir kullanıcı giriş YAPABİLİR, panelde ise açık bir 403 görür.
+  Hata mesajlarının tamamı ve neden ayrıldıkları: `lib/auth/messages.ts`.
+  Özetle: "parolan yanlış" YALNIZ gerçekten parola yanlışken söylenir; yığın
+  ayakta değilken aynı cümleyi kurmak kullanıcıyı saatlerce yanlış yerde
+  aratır.
 */
-const GENERIC_LOGIN_ERROR = "E-posta veya parola hatalı.";
 
 export async function signInAction(
   _prevState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  // Yapılandırma hiç yoksa denemenin anlamı yok: sonuç her koşulda başarısız
+  // olurdu ve kullanıcı bunu kimlik bilgisi hatası sanırdı.
+  if (!isSupabaseConfigured) {
+    return { error: AUTH_NOT_CONFIGURED_ERROR };
+  }
+
   const parsed = credentialsSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -51,11 +58,30 @@ export async function signInAction(
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  const supabase = await getServerClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
+  /*
+    `signInWithPassword` ağ hatasında ATMAZ, `error` döndürür; ama istemcinin
+    kurulumu (`getServerClient`) atabilir. İkisi de aynı yere varmalı, o yüzden
+    çağrı bir bütün olarak sarılıyor. `redirect()` bu bloğun DIŞINDA kalır —
+    o bir istisna atarak çalışır, buradaki catch onu yutardı.
+  */
+  const attempt = await (async () => {
+    try {
+      const supabase = await getServerClient();
+      return await supabase.auth.signInWithPassword({
+        email: parsed.data.email,
+        password: parsed.data.password,
+      });
+    } catch {
+      // İstemci hiç kurulamadı: istek sunucuya varmadı.
+      return null;
+    }
+  })();
+
+  if (attempt === null) {
+    return { error: AUTH_UNAVAILABLE_ERROR };
+  }
+
+  const { error } = attempt;
 
   if (error) {
     /*
@@ -66,10 +92,27 @@ export async function signInAction(
       kimlik bilgisi hatası DEĞİLDİR ve numaralandırma bilgisi taşımaz.
     */
     if (error.status === 429) {
-      return {
-        error: "Çok fazla deneme yapıldı. Lütfen birkaç dakika sonra tekrar deneyin.",
-      };
+      return { error: AUTH_RATE_LIMITED_ERROR };
     }
+
+    /*
+      ALTYAPI HATASI mı, KİMLİK HATASI mı?
+
+      `status` HTTP durumudur. Fetch hiç tamamlanamadığında (yığın kapalı,
+      port yanlış, Docker durmuş) auth-js `AuthRetryableFetchError` üretir ve
+      durumu `0` olur; 5xx ise sunucu ayakta ama sağlıksızdır. İkisi de
+      kullanıcının parolasıyla ilgili DEĞİLDİR.
+
+      Sınıf adına (`AuthRetryableFetchError`) bakılmıyor: o sınıf
+      `@supabase/auth-js` içinde yaşıyor ve bu paket projenin doğrudan
+      bağımlılığı değil — `@supabase/supabase-js` onu yeniden dışa
+      aktarmıyor. Bildirilmemiş bir pakete `import` yazmak yerine durum
+      kodunun kendisine bakmak hem daha dayanıklı hem daha dürüst.
+    */
+    if (!error.status || error.status >= 500) {
+      return { error: AUTH_UNAVAILABLE_ERROR };
+    }
+
     return { error: GENERIC_LOGIN_ERROR };
   }
 

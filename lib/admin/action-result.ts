@@ -8,26 +8,45 @@
   taşır, yazma sonucu kullanıcıya gösterilecek mesaj taşır.
 */
 
-export interface ActionState {
+export interface ActionState<TValues = unknown> {
   status: "idle" | "success" | "error";
   /** Kullanıcıya gösterilecek genel mesaj. */
   message: string | null;
   /** Alan adı → hata mesajı. */
   fieldErrors: Record<string, string>;
+  /**
+   * GÖNDERİLEN DEĞERLERİN GERİ DÖNÜŞÜ.
+   *
+   * React, `<form action={fn}>` ile yapılan her gönderimde formu OTOMATİK
+   * SIFIRLAR (`requestFormReset` → `form.reset()`). Doğrulama hatasında
+   * kullanıcının yazdığı her şey böylece silinir. Bunu engellemenin doğru yolu
+   * doğrulamayı gevşetmek değil, sunucunun aldığı değerleri geri göndermesi ve
+   * formun onları yeniden basmasıdır.
+   *
+   * `tarayıcı deposu KULLANILMAZ` — değer yalnız bu tur içinde taşınır.
+   */
+  values?: TValues;
 }
 
-export const IDLE_ACTION_STATE: ActionState = {
+export const IDLE_ACTION_STATE: ActionState<never> = {
   status: "idle",
   message: null,
   fieldErrors: {},
 };
 
-export function actionError(message: string, fieldErrors: Record<string, string> = {}): ActionState {
-  return { status: "error", message, fieldErrors };
+export function actionError<TValues = never>(
+  message: string,
+  fieldErrors: Record<string, string> = {},
+  values?: TValues,
+): ActionState<TValues> {
+  return { status: "error", message, fieldErrors, values };
 }
 
-export function actionSuccess(message: string): ActionState {
-  return { status: "success", message, fieldErrors: {} };
+export function actionSuccess<TValues = never>(
+  message: string,
+  values?: TValues,
+): ActionState<TValues> {
+  return { status: "success", message, fieldErrors: {}, values };
 }
 
 /** zod `flatten()` çıktısını alan bazlı haritaya çevirir. */
@@ -37,6 +56,35 @@ export function fieldErrorsFromZod(
   const result: Record<string, string> = {};
   for (const [field, messages] of Object.entries(flattened.fieldErrors)) {
     if (messages && messages.length > 0) result[field] = messages[0];
+  }
+  return result;
+}
+
+/** Hiçbir alana bağlanamayan (form geneli) hataların anahtarı. */
+export const FORM_ERROR_KEY = "_form";
+
+/**
+ * zod HATALARINI NOKTALI YOL ANAHTARLARINA çevirir: `specs.1.value` gibi.
+ *
+ * NEDEN `flatten()` DEĞİL: `z.flattenError()` yalnız BİRİNCİ SEVİYE anahtarı
+ * korur. İç içe bir dizide (`specs[1].value`) hata `specs` altında toplanır ve
+ * hangi satırın hangi alanının bozuk olduğu bilgisi KAYBOLUR — kullanıcıya
+ * gösterilebilecek tek şey "alt bölümlerde hata var" cümlesi kalır.
+ *
+ * Yol tümüyle korunduğunda form her hatayı doğru satırın doğru alanına
+ * yazabilir. Düz şemalarda çıktı `flatten()` ile aynıdır (yol tek parçadır),
+ * bu yüzden desen her iki durumda da çalışır.
+ *
+ * Aynı alan için birden çok sorun varsa İLKİ kazanır: kullanıcıya aynı anda
+ * iki çelişik talimat vermek düzeltmeyi zorlaştırır.
+ */
+export function fieldErrorsFromZodIssues(
+  issues: readonly { readonly path: readonly PropertyKey[]; readonly message: string }[],
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const issue of issues) {
+    const key = issue.path.length > 0 ? issue.path.map(String).join(".") : FORM_ERROR_KEY;
+    if (result[key] === undefined) result[key] = issue.message;
   }
   return result;
 }

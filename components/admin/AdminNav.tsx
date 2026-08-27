@@ -19,9 +19,18 @@ interface AdminLink {
   exact?: boolean;
 }
 
+/*
+  Sıra bilinçlidir: önce katalog (ürün ve onu tanımlayan taksonomi), sonra
+  sitenin kendisi (seçki, ana sayfa, ayarlar).
+
+  "Seçki" adı ana sayfada BASILAN adla aynıdır ("Robot Fix Seçkisi"). Panelde
+  "Öne Çıkanlar" gibi ikinci bir ad kullanmak, alanın aranıp bulunamamasının
+  sebeplerinden biriydi — iki yüzeyde iki isim, tek kavram.
+*/
 const LINKS: readonly AdminLink[] = [
   { href: "/admin", label: "Panel", exact: true },
   { href: "/admin/urunler", label: "Ürünler" },
+  { href: "/admin/secki", label: "Seçki" },
   { href: "/admin/markalar", label: "Markalar" },
   { href: "/admin/kategoriler", label: "Kategoriler" },
   { href: "/admin/cihaz-modelleri", label: "Cihaz Modelleri" },

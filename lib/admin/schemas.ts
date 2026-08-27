@@ -120,13 +120,23 @@ export const marketplaceLinkSchema = z
     path: ["customLabel"],
   });
 
+/*
+  Alt kayıt mesajları TÜRKÇE yazılır. Sebebi kozmetik değil: bu mesajlar artık
+  ilgili satırın ilgili alanının ALTINDA gösteriliyor (yol bazlı hata haritası,
+  lib/admin/action-result.ts). zod'un varsayılan "Invalid UUID" metni orada
+  kullanıcıya hiçbir şey söylemez. Kuralın kendisi değişmedi.
+*/
 export const productSubResourcesSchema = z.object({
   specs: z.array(specSchema).max(100, "En fazla 100 teknik özellik eklenebilir."),
-  compatibleModelIds: z.array(z.string().uuid()).max(500),
+  compatibleModelIds: z
+    .array(z.string().uuid("Geçersiz cihaz modeli seçimi; listeden yeniden seçin."))
+    .max(500, "En fazla 500 cihaz modeli işaretlenebilir."),
   marketplaceLinks: z
     .array(marketplaceLinkSchema)
     .max(5, "Her pazaryeri için en fazla bir bağlantı eklenebilir."),
-  relatedProductIds: z.array(z.string().uuid()).max(20),
+  relatedProductIds: z
+    .array(z.string().uuid("Geçersiz ürün seçimi; listeden yeniden seçin."))
+    .max(20, "En fazla 20 ilgili ürün seçilebilir."),
 });
 
 // --- Ürün -----------------------------------------------------------------
