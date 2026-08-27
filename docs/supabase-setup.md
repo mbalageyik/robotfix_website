@@ -210,8 +210,32 @@ supabase stop     # yığını durdur
 
 ## Bölüm 2 — Uzak proje (yayın)
 
-> Bu bölüm **henüz uygulanmadı**. Aşağıdaki adımlar yayın anında izlenecek sırayı
-> tarif eder. Üretim veritabanına demo veri **hiçbir koşulda** yüklenmez.
+> **UYGULANDI (2026-08-27).** Üretim projesi `robotfix-production`
+> (ref `hxwlfgipfbcerrslbmlf`, bölge `eu-central-1` / Frankfurt). Beş migrasyonun
+> tamamı uygulandı, şema farkı temiz, doğrulanmış işletme bilgisi yazıldı.
+> Üretim veritabanına demo veri **hiçbir koşulda** yüklenmez — şu an sıfır
+> `is_demo` satırı vardır.
+
+### 2.0 BÖLGE SEÇİMİ GERİ ALINAMAZ — önce bunu okuyun
+
+Bir Supabase projesinin bölgesi **oluşturulduktan sonra değiştirilemez**.
+Değiştirmenin tek yolu yeni proje açıp her şeyi taşımaktır.
+
+Bu proje bunu bir kez yaşadı: ilk açılan üretim projesi Seul
+(`ap-northeast-2`) bölgesindeydi. Türkiye'den ölçülen origin gidiş-dönüşü:
+
+| Bölge                      | Ölçülen origin turu | Not                                   |
+| -------------------------- | ------------------- | ------------------------------------- |
+| Seul (`ap-northeast-2`)    | **~450 ms**         | ~8.000 km                             |
+| Frankfurt (`eu-central-1`) | **~170 ms**         | ~2.000 km — seçilen bölge             |
+
+Sorgu başına ~280 ms fark eder ve her sayfa birden çok sorgu yapar. Ölçüm
+yöntemi: PostgREST'e kimlik doğrulamalı bir `rpc` isteği (var olmayan fonksiyon;
+404 döner ama istek origin'e kadar gider). **Yalnızca `https://<ref>.supabase.co`
+adresine sade bir istek atarak ölçmeyin** — o istek Cloudflare kenarında
+sonlanır ve bölgeden bağımsız olarak ~130 ms görünür, yani hiçbir şey söylemez.
+
+Türkiye'deki kullanıcılar için `eu-central-1` (Frankfurt) seçilir.
 
 ### 2.1 Proje oluştur
 
@@ -346,6 +370,31 @@ select id, email from auth.users where email = 'yonetici@ornek.com';
 ```sql
 select * from public.admin_users;
 ```
+
+### 2.5.1 Doğrulanmış işletme bilgisini yaz
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/business_info.sql
+```
+
+Bu dosya **tohum verisi değildir** — `seed.sql` yalnız demo veri yükler ve
+üretime hiç gitmez; `business_info.sql` ise gerçek işletme bilgisini yazar ve
+üretimde çalıştırılır. Tekrar çalıştırılabilir (`on conflict do update`).
+
+Yazdığı dört alan (hepsi **DOĞRULANMIŞ**, TODO işareti taşımaz):
+
+| Anahtar          | Değer                                                        |
+| ---------------- | ------------------------------------------------------------ |
+| `whatsapp_phone` | `+905524261616` (E.164 — wa.me bağlantısı bundan üretilir)   |
+| `phone_display`  | `0552 426 16 16`                                             |
+| `address_line`   | `Sarıgüllük, 61030. Sk. No: 1/A, 27060 Şehitkamil / Gaziantep` |
+| `working_hours`  | `Pazartesi–Cumartesi 09:00–19:30 · Pazar kapalı`             |
+
+> **Panelden yapılan düzenlemeyi EZER.** İşletme bilgisi panelden güncellendiyse
+> önce bu dosyaya yansıtılmalıdır; aksi hâlde bir sonraki çalıştırma geri alır.
+
+Doğrulanmamış alanlar (`maps_url`, pazaryeri bağlantıları) bu dosyaya **girmez**;
+boş kalırlar ve arayüzde ilgili buton/bölüm hiç gösterilmez.
 
 ### 2.6 Üretim ortam değişkenleri (Vercel)
 
