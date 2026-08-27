@@ -44,3 +44,16 @@ next-env.d.ts
 # Playwright MCP geçici çıktıları
 .playwright-mcp/
 *-1440.png
+
+# Ajan/eklenti çalışma alanı — üretilebilir, depoya girmez.
+# .atelier/ QA kanıt ekran görüntüleriyle birlikte ~21 MB'tır ve her denetimde
+# yeniden üretilir; git geçmişini kalıcı olarak şişirmesinin bir karşılığı yok.
+.atelier/
+.claude/settings.local.json
+
+# Kök dizindeki geliştirme ekran görüntüleri (public/ altındaki site görselleri
+# İZLENİR — bu kural yalnız kökü kapsar).
+/admin.png
+/hizmetler.png
+/secki.png
+/servis-vitrini.png
