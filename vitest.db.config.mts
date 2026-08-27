@@ -42,6 +42,16 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ?? "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+      /*
+        Doğrudan Postgres bağlantısı. AKTARILMAZSA SÜİT HİÇ ÇALIŞMAZ:
+        `postgrest-queries.test.ts` içindeki yerellik koruması `SUPABASE_DB_URL`
+        okur, boş bulur, "yerel değil" deyip beforeAll'da durur. Yani koruma
+        fail-safe davranıp süiti tümüyle kapatıyordu — testler yeşil değil,
+        HİÇ yoktu.
+
+        Değer yalnız sürece aktarılır; hiçbir yere basılmaz (bkz. dosya başı).
+      */
+      SUPABASE_DB_URL: env.SUPABASE_DB_URL ?? "",
       // Testler demo veri üzerinde çalışır; geliştiricinin .env.local bayrağına
       // bağlı kalmasın diye BURADA sabitlenir.
       NEXT_PUBLIC_SHOW_DEMO_PRODUCTS: "true",

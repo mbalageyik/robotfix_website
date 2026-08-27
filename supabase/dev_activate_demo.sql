@@ -30,23 +30,35 @@ begin
       'Demo veriyi üretime asla aktifleştirmeyin.';
   end if;
 
-  -- 2. KATMAN: veritabanında GERÇEK katalog verisi var mı?
-  -- Yerel yığın taklit edilse bile dolu bir veritabanına dokunmayız.
+  /*
+    2. KATMAN: burası GERÇEK bir kurulum mu?
+
+    ÖNCEKİ ÖLÇÜT ÇÜRÜDÜ. Eskiden bu katman "demo olmayan tek bir katalog satırı
+    varsa reddet" diyordu. Geliştirici panelden TEK bir test ürünü oluşturur
+    oluşturmaz betik kendi geliştirme veritabanında da reddetmeye başladı ve
+    belgelenen "katalogu tasarım için doldur" yolu sessizce kapandı — panel
+    tam olarak ürün oluşturmak için varken.
+
+    Doğru soru "veritabanı dolu mu" değil, "burası gerçek bir kurulum mu".
+    Gerçek bir kurulumda yönetici hesabı gerçek bir e-postadır; yerel yığında
+    `dev_create_admin.sql` her zaman `...@robotfix.local` üretir. Yönetici
+    tablosu boşsa (taze veritabanı) ortada korunacak bir kurulum da yoktur.
+
+    Koruma ZAYIFLAMADI, çünkü üçüncü bir sınır zaten aşağıdaki `update`
+    satırlarının kendisindedir: hepsi `where is_demo` ile sınırlıdır ve
+    demo OLMAYAN hiçbir satıra dokunamaz.
+  */
   select count(*) into real_rows
-  from (
-    select 1 from public.products   where not is_demo
-    union all select 1 from public.brands     where not is_demo
-    union all select 1 from public.categories where not is_demo
-    union all select 1 from public.services   where not is_demo
-  ) t;
+  from public.admin_users
+  where email is null or email not like '%.local';
 
   if real_rows > 0 then
     raise exception
-      'REDDEDİLDİ: veritabanında % adet gerçek (demo olmayan) katalog satırı var. '
-      'Bu betik yalnız boş/demo bir geliştirme veritabanında çalıştırılır.', real_rows;
+      'REDDEDİLDİ: bu veritabanında yerel olmayan (% adet) yönetici hesabı var. '
+      'Burası gerçek bir kurulum gibi görünüyor; demo veriyi aktifleştirmiyoruz.', real_rows;
   end if;
 
-  raise notice 'Koruma geçildi: yerel yığın, gerçek katalog verisi yok.';
+  raise notice 'Koruma geçildi: yerel yığın, yerel olmayan yönetici hesabı yok.';
 end
 $$;
 

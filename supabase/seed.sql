@@ -238,14 +238,30 @@ on conflict (slug) do nothing;
 -- ---------------------------------------------------------------------------
 -- Site ayarları
 -- ---------------------------------------------------------------------------
--- Değerler BOŞ bırakılır. İşletme bilgisi (§21) doğrulanana kadar env'deki
--- varsayım kullanılır; lib/site-config.ts boş değeri env'e düşürür.
+-- DOĞRULANMAMIŞ değerler BOŞ bırakılır. İşletme bilgisi (§21) doğrulanana
+-- kadar env'deki varsayım kullanılır; lib/site-config.ts boş değeri env'e
+-- düşürür.
+--
+-- ADRES VE ÇALIŞMA SAATİ ARTIK DOLU (2026-08-21): ikisi de kullanıcı
+-- tarafından açıkça onaylandı, dolayısıyla §20'nin "uydurulamaz" kapsamından
+-- çıktılar. Telefon alanları BOŞ KALIYOR — onlar hâlâ onay bekliyor.
+--
+-- PAZAR GÜNÜ BİR VARSAYIMDIR, VERİ DEĞİL. Kullanıcı Pazartesi–Cumartesi
+-- saatlerini verdi, Pazar gününü belirtmedi. "Kapalı" olarak girildi çünkü
+-- boş bırakmak ziyaretçiye hiçbir şey söylemezdi; ama bu bir doğrulama
+-- değil, bir varsayımdır ve üç yerde iz bırakır: burada, `description`
+-- sütununda ve panelin alan ipucunda.
 insert into public.site_settings (key, value, description)
 values
   ('whatsapp_phone',        null, 'E.164 biçiminde WhatsApp numarası. TODO(business): doğrulanacak.'),
   ('phone_display',         null, 'Ekranda gösterilen telefon biçimi.'),
-  ('address_line',          null, 'Açık adres. TODO(business): doğrulanacak.'),
-  ('working_hours',         null, 'Çalışma saatleri. TODO(business): hafta sonu durumu netleşecek.'),
+  ('address_line',
+   'Sarıgüllük, 61030. Sk. No: 1/A, 27060 Şehitkamil / Gaziantep',
+   'Açık adres. Bilgi dosyası §10; kullanıcı tarafından güncel olarak ONAYLANDI (2026-08-21).'),
+  ('working_hours',
+   'Pazartesi–Cumartesi 09:00–19:30 · Pazar kapalı',
+   'Çalışma saatleri. Pzt–Cmt kullanıcı tarafından onaylandı (2026-08-21). '
+   'TODO(business): Pazar günü çalışma durumu DOĞRULANMADI, varsayılan olarak kapalı girildi.'),
   ('maps_url',              null, 'Google Business Profile / harita bağlantısı.'),
   ('store_amazon_url',      null, 'Amazon MAĞAZA bağlantısı. TODO(business): doğrulanacak.'),
   ('store_hepsiburada_url', null, 'Hepsiburada MAĞAZA bağlantısı. TODO(business): doğrulanacak.'),

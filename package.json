@@ -6,9 +6,11 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "predev": "node scripts/dev-preflight.mjs",
+    "dev": "next dev -p 3434",
+    "db:preflight": "node scripts/dev-preflight.mjs",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3434",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -19,7 +21,12 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local --schema public > lib/supabase/database.types.ts",
-    "db:seed:clear": "psql \"$SUPABASE_DB_URL\" -f supabase/seed_clear.sql"
+    "db:seed:clear": "psql \"$SUPABASE_DB_URL\" -f supabase/seed_clear.sql",
+    "db:demo:images": "bash supabase/dev_upload_demo_images.sh",
+    "db:demo:on": "docker exec -i supabase_db_robotfix_son_durum psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/dev_activate_demo.sql",
+    "db:demo:off": "docker exec -i supabase_db_robotfix_son_durum psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/dev_deactivate_demo.sql",
+    "db:preview:on": "docker exec -i supabase_db_robotfix_son_durum psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/dev_promote_preview_products.sql",
+    "db:preview:off": "docker exec -i supabase_db_robotfix_son_durum psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/dev_demote_preview_products.sql"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
