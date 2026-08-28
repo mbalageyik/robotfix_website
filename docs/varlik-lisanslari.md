@@ -15,6 +15,14 @@
 | `public/gorseller/hero-ornek-gorsel.svg`     | SVG   | Proje varlığı (elle çizildi)                                                                 | —              | —               | Yer tutucu              |
 | `public/videos/servis-vitrini.mp4`           | Video | Pexels — "A Robotic Vacuum Cleaner for Housekeeping" (video id 8566386, çeken: Kindel Media) | Pexels License | Hayır           | **Geçici / yer tutucu** |
 | `public/gorseller/servis-vitrini-poster.jpg` | JPEG  | Yukarıdaki videodan alınan tek kare                                                          | Pexels License | Hayır           | **Geçici / yer tutucu** |
+| `public/gorseller/vena-logo.png`             | PNG   | VenaTech marka varlığı — siteyi yapan stüdyonun logosu, işletme tarafından sağlandı          | Marka sahibinin izni | Evet (yapımcı atfı) | Kalıcı              |
+
+**`vena-logo.png` hakkında.** Kaynak dosya 880×795 PNG'dir ve alt üçte biri
+tamamen saydamdır; bu boşluk alfa sınırına kırpıldı (841×535), ardından 151×96'ya
+ölçeklendi (~8 KB). Kullanım yeri yalnızca alt bilgideki yapımcı atfıdır
+(`components/layout/SiteFooter.tsx`). Bu **üçüncü taraf bir marka varlığıdır**:
+yeniden renklendirilmez, döndürülmez, oranı bozulmaz ve Robot Fix'in kendi
+işareti gibi kullanılmaz. Logodaki kırmızı Robot Fix paletine eklenmemiştir.
 
 ### Açılış koreografisi — `public/gorseller/hero/`
 

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 import { Logo } from "@/components/layout/Logo";
@@ -146,9 +147,42 @@ export async function SiteFooter() {
           </div>
         </div>
 
-        <p className="mt-10 border-t border-border pt-6 text-caption text-text-muted">
-          © {year} Robot Fix
-        </p>
+        <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 text-caption text-text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>© {year} Robot Fix</p>
+
+          {/*
+            YAPIMCI ATFI — Robot Fix'in bir iddiası değil, siteyi yapan
+            stüdyonun imzasıdır. Bu yüzden telif satırının yanında, aynı
+            sessiz `text-caption` ölçeğinde durur; kendi bölümü veya
+            vurgulu bir rozeti yoktur.
+
+            Logo METİN DEĞİL bir çizimdir, bu yüzden `alt=""` ile dekoratif
+            işaretlenir: adı hemen yanındaki gerçek metin zaten söylüyor;
+            aksi hâlde ekran okuyucu "VenaTech VenaTech" derdi. Aynı sebeple
+            ad görsele gömülü bırakılmaz — arama motoru ve ekran okuyucu için
+            metin olarak yazılır.
+
+            Kırmızı işaret Robot Fix paletinin parçası DEĞİLDİR ve öyle
+            davranmaz: yalnız bu 20 px'lik imzada geçer, hiçbir semantik
+            role bağlanmaz. Gece Laciverti üstünde ölçülen oran 4.07:1 —
+            metin olmayan grafik için WCAG 1.4.11 sınırının (3:1) üstünde.
+
+            TODO(business): VenaTech'in resmî adresi doğrulandığında bu blok,
+            yukarıdaki harici bağlantılarla aynı kuralla (yeni sekme + noopener
+            noreferrer) bir bağlantıya dönüşebilir. Doğrulanmamış adres yazılmaz.
+          */}
+          <p className="inline-flex items-center gap-2">
+            <span>Powered by</span>
+            <Image
+              src="/gorseller/vena-logo.png"
+              alt=""
+              width={151}
+              height={96}
+              className="h-5 w-auto"
+            />
+            <span className="font-medium text-text">VenaTech</span>
+          </p>
+        </div>
       </Container>
     </footer>
   );
