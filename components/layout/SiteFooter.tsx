@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ConsentPreferencesButton } from "@/components/analytics/ConsentPreferencesButton";
 import { Container } from "@/components/layout/Container";
 import { Logo } from "@/components/layout/Logo";
 import { ClockIcon, ExternalLinkIcon, MapPinIcon, PhoneIcon } from "@/components/ui/icons";
@@ -148,7 +149,15 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 text-caption text-text-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} Robot Fix</p>
+          {/*
+            Telif satırı ile çerez tercihi YAN YANA durur. Tercih bağlantısı
+            analitik yapılandırılmamışken kendini gizler (bileşenin kendi
+            kararı) — o durumda bu satır yine tek öğeyle doğru hizalanır.
+          */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p>© {year} Robot Fix</p>
+            <ConsentPreferencesButton />
+          </div>
 
           {/*
             YAPIMCI ATFI — Robot Fix'in bir iddiası değil, siteyi yapan

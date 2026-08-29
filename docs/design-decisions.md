@@ -771,8 +771,8 @@ karar §9'a dayandırılmadan önce resmî kaynaklar tarandı (Ağustos 2026).
 
 **Amazon — logo bu kullanımda AÇIKÇA YASAK.** Amazon Ads'in marka kullanım
 politikası ([advertising.amazon.com/resources/ad-policy/brand-usage][amz])
-şunu yazar: *"The Amazon and Smile logos are not permitted in third-party
-advertising by vendors and sellers linking in to Amazon."* Bizim durumumuz
+şunu yazar: _"The Amazon and Smile logos are not permitted in third-party
+advertising by vendors and sellers linking in to Amazon."_ Bizim durumumuz
 tam olarak budur — kendi Amazon mağazamıza bağlanan bir satıcı bağlantısı.
 Politikanın izin verdiği tek istisna, Amazon'un **birden çok perakendeciyle
 birlikte ve bağlantısız** bir dizide gösterilmesidir; bizimki o değil.
@@ -809,3 +809,60 @@ yeniden açılabilir; o iş bir varlık temini ve onay işidir, bir kodlama işi
 değildir.
 
 [amz]: https://advertising.amazon.com/resources/ad-policy/brand-usage
+
+## 39. Google Analytics — onay kapısı arkasında, `@next/third-parties` olmadan
+
+GA4 `NEXT_PUBLIC_GA_MEASUREMENT_ID` ile bağlanır. Katmanın tamamı
+`lib/analytics/` (kimlik doğrulama + onay deposu + olay sözlüğü) ve
+`components/analytics/` (bant + yükleyici) altındadır; montaj noktası
+`app/(site)/layout.tsx` içindeki tek bir `<Analytics />`dir.
+
+**`@next/third-parties/google` KULLANILMADI.** Paketin `GoogleAnalytics`
+bileşeni tag'i koşulsuz yükler; bize gereken şey ise tam tersi — gtag.js'in
+onay verilene kadar HİÇ yüklenmemesi. Onay Modu varsayılanlarını tag'den
+ÖNCE tanımlamak da o bileşenin sunmadığı bir şey. Paket ayrıca kendi
+dokümanında **deneysel** olarak işaretli. Elle yazılan sürüm ~60 satır ve
+tam olarak istediğimiz sırayı kuruyor; bir bağımlılık eklemek burada kontrol
+kaybından başka bir şey getirmiyordu.
+
+**Script onay öncesi HİÇ render edilmez.** "Yükle ama çerez yazma" yaklaşımı
+yeterli değildir: `googletagmanager.com`a bağlanmak IP ve User-Agent'ı zaten
+Google'a taşır. `granted` olmadan `<Script>` ağaçta yoktur.
+
+**Onay Modu v2 yine de kurulur ve reklam izinleri açılmaz.** Varsayılanlar
+tamamı `denied`, ardından yalnız `analytics_storage` `granted`a çekilir.
+Kullanıcıdan istenen onayın kapsamı ile teknik ayarın kapsamı birebir aynıdır.
+
+**`gtag` kabuğu satır içi script'te değil, bir efektte tanımlanır.** Satır içi
+`<Script>` de hidrasyondan sonra enjekte edilir; `page_view` efekti ondan önce
+koşabilir ve ilk sayfa görüntüleme sessizce kaybolurdu. Efektte tanımlandığında
+sıra garantidir ve çağrılar `dataLayer` kuyruğuna yazılıp kütüphane yüklenince
+işlenir. Kuyruğa `arguments` nesnesinin KENDİSİ yazılır — gtag protokolü komutu
+düz veriden `Arguments` tipine bakarak ayırır; dizi yazılırsa çağrı sessizce
+yok sayılır. `prefer-rest-params` bu yüzden tek satırda kapatılmıştır.
+
+**`send_page_view: false` + elle `page_view`.** GA4'ün otomatik gönderimi yalnız
+belge yüklemesinde çalışır; App Router'ın istemci tarafı gezinmeleri ölçüme
+girmezdi. Sorgu dizesi yola dâhil edilir, yoksa tüm katalog filtresi kullanımı
+tek bir sayfa gibi görünürdü.
+
+**Karar `localStorage`ta, çerezde değil.** Sunucu bu kararı hiç okumuyor;
+çereze yazmak her isteğe binen ve statik önbelleği bölen bir başlık eklerdi.
+Kayıt sürüm ön ekli (`1:granted`); ölçümün kapsamı genişlerse sürüm artırılır
+ve tüm eski onaylar geçersizleşir. Depo `useSyncExternalStore` sözleşmesini
+uygular — bu sayede context'e gerek kalmaz ve karar açık DİĞER sekmelere de
+`storage` olayıyla yansır.
+
+**Kapsam yalnız `(site)`.** `/admin`, `/styleguide` ve `/veri-kontrol`
+ölçülmez: işletmenin kendi tıklamaları ziyaretçi verisini kirletir ve panelde
+yayımlanmamış kayıt kimlikleri URL'de geçer.
+
+**Ölçüm kimliği yoksa katman yoktur.** Ne bant, ne script, ne alt bilgideki
+"Çerez tercihleri" butonu render edilir.
+
+Yapılmadı: §19'daki dönüşüm olaylarının bileşenlere BAĞLANMASI. Tipli sözlük
+ve `trackEvent()` hazır (`lib/analytics/events.ts`), çağrı yerleri henüz yok.
+
+TODO(business): ayrıntılı çerez ve gizlilik politikası metni işletmeden
+alınacak; geldiğinde bant o sayfaya bağlanır. Doğrulanmamış hukuki metin
+uydurulmaz (§20).

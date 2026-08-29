@@ -1,3 +1,4 @@
+import { Analytics } from "@/components/analytics/Analytics";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 
@@ -29,6 +30,14 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
   `<body>`de kalır. Sonuç, gözle bakınca çalışıyormuş gibi görünen ama ekran
   okuyucuya hiçbir şey bildirmeyen bir bağlantıdır (WCAG 2.4.1). `-1` öğeyi
   Tab sırasına SOKMADAN programatik odağa açar; doğru davranış budur.
+
+  ANALİTİK DE BURADA, KÖK DÜZENDE DEĞİL. Ölçüm YALNIZ genel siteyi kapsar.
+  `/admin` işletmenin kendi çalışma alanıdır: kendi tıklamalarını ölçmek
+  ziyaretçi verisini kirletir, üstelik panelde ürün kimliği gibi henüz
+  yayımlanmamış bilgiler URL'de geçer ve bunların üçüncü tarafa gitmesi
+  istenmez. `/styleguide` ve `/veri-kontrol` de aynı sebeple dışarıda kalır.
+  Kapsamı bu klasörün belirlemesi, kabuğun kendisinde olduğu gibi, yeni bir
+  sayfa eklerken "ölçüme dâhil etmeyi unutma" ihtimalini ortadan kaldırır.
 */
 
 export default function SiteLayout({ children }: LayoutProps<"/">) {
@@ -43,6 +52,7 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
       <SiteHeader />
       {children}
       <SiteFooter />
+      <Analytics />
     </>
   );
 }
